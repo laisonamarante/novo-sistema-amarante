@@ -55,6 +55,7 @@ export const construtoras = mysqlTable('construtoras', {
   cidade:  varchar('cidade', { length: 100 }),
   uf:      varchar('uf', { length: 2 }),
   cep:     varchar('cep', { length: 10 }),
+  parceiroId: int("parceiro_id"),
   usuarioId: int('usuario_id').references(() => usuarios.id),
   ativo:   boolean('ativo').notNull().default(true),
 })

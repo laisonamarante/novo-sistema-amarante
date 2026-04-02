@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { trpc } from '../lib/trpc'
 import { PageHeader, Card, Button, Input, Select, Textarea, Table, Loading, Modal, Tabs } from '../components/ui'
@@ -156,7 +156,9 @@ function TabEmpreendimentos() {
 }
 
 function TabConstrutoras() {
-  return <CadSimples label="Construtora" novo="Nova" listarQuery={trpc.cadastros.construtoras.listar.useQuery()} criarMutation={(opts:any)=>trpc.cadastros.construtoras.criar.useMutation(opts)} editarMutation={(opts:any)=>trpc.cadastros.construtoras.editar.useMutation(opts)} excluirMutation={(opts:any)=>trpc.cadastros.construtoras.excluir.useMutation(opts)} campos={[{key:'nome',label:'Nome da Construtora',required:true},{key:'cnpj',label:'CNPJ'},{key:'contato',label:'Nome do Contato'},{key:'fone',label:'Fone'},{key:'email',label:'E-mail'},{key:'endereco',label:'Endereço',hideTable:true},{key:'numero',label:'Número',hideTable:true},{key:'bairro',label:'Bairro',hideTable:true},{key:'cidade',label:'Cidade',hideTable:true},{key:'uf',label:'UF',type:'select',options:UF_OPTIONS,hideTable:true},{key:'cep',label:'CEP',hideTable:true},{key:'ativo',label:'Ativo',type:'checkbox',hideTable:true}]} />
+  const {data:us}=trpc.cadastros.usuarios.listar.useQuery(); const uo=(us||[]).map((u:any)=>({value:u.id,label:u.nome}))
+  const {data:pd}=trpc.cadastros.parceiros.listar.useQuery(); const po=(pd||[]).map((p:any)=>({value:p.id,label:p.nome}))
+  return <CadSimples label="Construtora" novo="Nova" listarQuery={trpc.cadastros.construtoras.listar.useQuery()} criarMutation={(opts:any)=>trpc.cadastros.construtoras.criar.useMutation(opts)} editarMutation={(opts:any)=>trpc.cadastros.construtoras.editar.useMutation(opts)} excluirMutation={(opts:any)=>trpc.cadastros.construtoras.excluir.useMutation(opts)} campos={[{key:'nome',label:'Nome da Construtora',required:true},{key:'cnpj',label:'CNPJ'},{key:'contato',label:'Nome do Contato'},{key:'fone',label:'Fone'},{key:'email',label:'E-mail'},{key:'endereco',label:'Endereço',hideTable:true},{key:'numero',label:'Número',hideTable:true},{key:'bairro',label:'Bairro',hideTable:true},{key:'cidade',label:'Cidade',hideTable:true},{key:'uf',label:'UF',type:'select',options:UF_OPTIONS,hideTable:true},{key:'cep',label:'CEP',hideTable:true},{key:'parceiroId',label:'Parceiro',type:'select',options:po,hideTable:true},{key:'usuarioId',label:'Usuário do Sistema',type:'select',options:uo,hideTable:true},{key:'ativo',label:'Ativo',type:'checkbox',hideTable:true}]} />
 }
 
 function TabImobiliarias() {
@@ -262,8 +264,14 @@ function TabFinTipoReceitas() {
 
 export function Configuracoes() {
   const [searchParams] = useSearchParams()
-  const defaultTab = searchParams.get('tab') || 'bancos'
+  const tabFromUrl = searchParams.get('tab')
+  const defaultTab = tabFromUrl || 'bancos'
   const [aba, setAba] = useState(defaultTab)
+  const viaMenu = !!tabFromUrl
+
+  useEffect(() => {
+    if (tabFromUrl) setAba(tabFromUrl)
+  }, [tabFromUrl])
   const abas = [
     { key: 'bancos', label: 'Bancos' },
     { key: 'agencias', label: 'Agências' },
@@ -290,9 +298,9 @@ export function Configuracoes() {
   ]
   return (
     <div>
-      <PageHeader title="Configurações" />
+      <PageHeader title={viaMenu ? (abas.find(a=>a.key===aba)?.label || 'Configurações') : 'Configurações'} />
       <Card className="p-5">
-        <Tabs active={aba} onChange={setAba} tabs={abas} />
+        {!viaMenu && <Tabs active={aba} onChange={setAba} tabs={abas} />}
         {aba === 'bancos' && <TabBancos />}
         {aba === 'agencias' && <TabAgencias />}
         {aba === 'modalidades' && <TabModalidades />}
