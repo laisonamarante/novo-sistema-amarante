@@ -1,16 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usePermissoes } from '../../lib/permissoes'
-import { Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
-import { Table, Btn, PageHeader, Pagination, Input } from '../../components/ui'
+import { Table, Btn, PageHeader, Pagination, Input, Modal } from '../../components/ui'
+import { formatCpfCnpj } from '../../lib/documento'
+import { ClienteForm } from './ClienteForm'
 import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 
-function ClienteLista({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
+type CadastroAberto = number | 'novo' | null
+type CadastroRota = 'novo' | 'editar'
+
+function ClienteLista({ tipo, cadastroRota }: { tipo: 'Comprador' | 'Vendedor'; cadastroRota?: CadastroRota }) {
   const { pode } = usePermissoes()
+  const { id } = useParams()
+  const navigate = useNavigate()
   const [busca, setBusca] = useState('')
   const [buscaAtiva, setBuscaAtiva] = useState('')
   const [pagina, setPagina] = useState(1)
   const utils = trpc.useUtils()
+
+  const base = tipo === 'Comprador' ? '/cadastros/compradores' : '/cadastros/vendedores'
+  const cadastroDaRota: CadastroAberto = cadastroRota === 'novo'
+    ? 'novo'
+    : cadastroRota === 'editar' && id && Number.isFinite(Number(id))
+      ? Number(id)
+      : null
+  const [cadastroAberto, setCadastroAberto] = useState<CadastroAberto>(cadastroDaRota)
 
   const { data, isLoading } = trpc.clientes.listar.useQuery({ tipo, busca: buscaAtiva, pagina })
   const excluir = trpc.clientes.excluir.useMutation({ 
@@ -19,8 +34,17 @@ function ClienteLista({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
     }
   })
 
-  const base = tipo === 'Comprador' ? '/cadastros/compradores' : '/cadastros/vendedores'
   const tipoLower = tipo === 'Comprador' ? 'comprador' : 'vendedor'
+  const tituloModal = cadastroAberto === 'novo' ? `Novo ${tipo}` : `Editar ${tipo}`
+
+  useEffect(() => {
+    if (cadastroRota) setCadastroAberto(cadastroDaRota)
+  }, [cadastroRota, cadastroDaRota])
+
+  const fecharCadastro = () => {
+    setCadastroAberto(null)
+    if (cadastroRota) navigate(base, { replace: true })
+  }
 
   return (
     <div>
@@ -28,9 +52,7 @@ function ClienteLista({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
         title={`Cadastro de ${tipo}`}
         actions={
           pode(`cadastro:${tipoLower}:criar`) ? (
-            <Link to={`${base}/novo`}>
-              <Btn icon={<Plus size={15}/>}>Novo</Btn>
-            </Link>
+            <Btn icon={<Plus size={15}/>} onClick={() => setCadastroAberto('novo')}>Novo</Btn>
           ) : undefined
         }
       />
@@ -41,6 +63,7 @@ function ClienteLista({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
           <Input
             placeholder={`Digite o nome ou CPF para pesquisar...`}
             value={busca}
+            mask="cpfCnpj"
             onChange={e => setBusca(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && (setBuscaAtiva(busca), setPagina(1))}
           />
@@ -61,9 +84,9 @@ function ClienteLista({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
             <td className="px-4 py-3 whitespace-nowrap">
               <div className="flex items-center gap-2">
                 {pode(`cadastro:${tipoLower}:editar`) && (
-                  <Link to={`${base}/${c.id}`} className="text-blue-600 hover:text-blue-800" title="Editar">
+                  <button type="button" onClick={() => setCadastroAberto(c.id)} className="text-blue-600 hover:text-blue-800" title="Editar">
                     <Edit size={15}/>
-                  </Link>
+                  </button>
                 )}
                 {pode(`cadastro:${tipoLower}:excluir`) && (
                   <button
@@ -75,7 +98,7 @@ function ClienteLista({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
               </div>
             </td>
             <td className="px-4 py-3 font-medium text-gray-800">{c.nome}</td>
-            <td className="px-4 py-3 font-mono text-sm text-gray-600">{c.cpfCnpj}</td>
+            <td className="px-4 py-3 font-mono text-sm text-gray-600">{formatCpfCnpj(c.cpfCnpj)}</td>
             <td className="px-4 py-3 text-sm text-gray-600">{c.fone1}</td>
             <td className="px-4 py-3 text-sm text-gray-600">{c.fone2}</td>
             <td className="px-4 py-3 text-sm text-gray-600">{c.fone3}</td>
@@ -85,9 +108,22 @@ function ClienteLista({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
       </Table>
 
       <Pagination pagina={pagina} total={data?.paginas || 1} onChange={setPagina}/>
+
+      <Modal title={tituloModal} open={cadastroAberto !== null} onClose={fecharCadastro} size="full">
+        {cadastroAberto !== null && (
+          <ClienteForm
+            key={`${tipo}-${cadastroAberto}`}
+            tipo={tipo}
+            clienteId={cadastroAberto}
+            modoPopup
+            onClose={fecharCadastro}
+            onSaved={() => utils.clientes.listar.invalidate()}
+          />
+        )}
+      </Modal>
     </div>
   )
 }
 
-export function Compradores() { return <ClienteLista tipo="Comprador"/> }
-export function Vendedores()  { return <ClienteLista tipo="Vendedor"/> }
+export function Compradores({ cadastroRota }: { cadastroRota?: CadastroRota }) { return <ClienteLista tipo="Comprador" cadastroRota={cadastroRota}/> }
+export function Vendedores({ cadastroRota }: { cadastroRota?: CadastroRota })  { return <ClienteLista tipo="Vendedor" cadastroRota={cadastroRota}/> }

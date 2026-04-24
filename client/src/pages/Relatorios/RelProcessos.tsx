@@ -25,8 +25,11 @@ export function RelProcessos() {
 
   const { data, isLoading } = trpc.processos.listar.useQuery({
     ...filtros,
-    concluidos:  tipoData === 'concluido',
-    reprovados:  tipoData === 'reprovado',
+    somenteConcluidos: tipoData === 'concluido',
+    somenteReprovados: tipoData === 'reprovado',
+    reprovados: tipoData === 'reprovado',
+    pendente,
+    atrasados,
     pagina: 1,
   }, {
     enabled: buscou,
@@ -38,7 +41,7 @@ export function RelProcessos() {
 
   function handleExport() {
     if (!data?.lista?.length) return
-    const headers = ['Codigo','N Proposta','Comprador','Banco','Agencia','Modalidade','Etapa Atual','Responsavel','Parceiro','Dias']
+    const headers = ['Codigo','N Proposta','Comprador','Banco','Agencia','Modalidade','Etapa Atual','Responsavel','Parceiro','Dias',...(exibirAtendimento ? ['Atendimento'] : [])]
     const rows = data.lista.map((p:any) => [
       p.id,
       p.numProposta || '',
@@ -50,6 +53,7 @@ export function RelProcessos() {
       p.responsavelNome || '',
       p.parceiroNome || '',
       Math.floor((Date.now() - new Date(p.criadoEm).getTime()) / 86400000),
+      ...(exibirAtendimento ? [p.ultimoAtendimento || ''] : []),
     ])
     exportToCSV(headers, rows, `relatorio_processos_${hoje()}.csv`)
   }
@@ -153,6 +157,7 @@ export function RelProcessos() {
                     {Math.floor((Date.now()-new Date(p.criadoEm).getTime())/86400000)}d
                   </span>
                 </td>
+                {exibirAtendimento && <td className="px-3 py-2 text-xs text-gray-600">{p.ultimoAtendimento || '--'}</td>}
               </tr>
             ))}
           </Table>

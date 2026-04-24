@@ -1,7 +1,22 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import {
+  AUTH_PERSIST_KEY,
+  clearStoredAuth,
+  syncStoredAuthToken,
+} from './auth-storage'
 
-interface Usuario { id: number; nome: string; login: string; perfil: string }
+interface Usuario {
+  id: number
+  nome: string
+  login: string
+  perfil: string
+  parceiroId?: number | null
+  corretorId?: number | null
+  imobiliariaId?: number | null
+  constutoraId?: number | null
+  subestabelecidoId?: number | null
+}
 
 interface AuthStore {
   token:   string | null
@@ -17,24 +32,19 @@ export const useAuth = create<AuthStore>()(
       usuario: null,
       setAuth: (token, usuario) => set({ token, usuario }),
       logout: () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('amarante-auth')
+        clearStoredAuth()
         set({ token: null, usuario: null })
       },
     }),
     {
-      name: 'amarante-auth',
+      name: AUTH_PERSIST_KEY,
       onRehydrateStorage: () => (state) => {
-        // Sync token to localStorage for trpc.ts
-        if (state?.token) localStorage.setItem('token', state.token)
-        else localStorage.removeItem('token')
+        syncStoredAuthToken(state?.token)
       },
     }
   )
 )
 
-// Subscribe to keep localStorage 'token' in sync
 useAuth.subscribe((state) => {
-  if (state.token) localStorage.setItem('token', state.token)
-  else localStorage.removeItem('token')
+  syncStoredAuthToken(state.token)
 })

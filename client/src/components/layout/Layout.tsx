@@ -1,79 +1,76 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
+import { usePermissoes } from '../../lib/permissoes'
+import { menu, type MenuItem as SidebarMenuItem } from './menu'
+import { QuickProcessSearch } from './QuickProcessSearch'
+import { ChatWidget } from '../chat/ChatWidget'
+import logoAmarante from '../../assets/logo-amarante-branca.png'
 import {
-  Home, Users, Settings, FileText, DollarSign, BarChart2,
-  ChevronDown, ChevronRight, LogOut, Clock, Folder,
-  AlertTriangle, Bell, CheckSquare, Building, Menu, X,
-  Search, User
+  ChevronDown, ChevronRight, LogOut, Clock,
+  Menu, X,
+  User
 } from 'lucide-react'
 
-interface MenuItem {
-  label: string; icon?: any; path?: string
-  children?: MenuItem[]; section?: string
+function filtrarMenu(items: SidebarMenuItem[], pode: (perm: string) => boolean): SidebarMenuItem[] {
+  const filtrados: SidebarMenuItem[] = []
+
+  for (const item of items) {
+    if (item.section) {
+      filtrados.push(item)
+      continue
+    }
+
+    if (item.perm && !pode(item.perm)) continue
+    if (item.perms && !item.perms.some(perm => pode(perm))) continue
+
+    if (item.children) {
+      const filhos = filtrarMenu(item.children, pode)
+      if (!filhos.length) continue
+      filtrados.push({ ...item, children: filhos })
+      continue
+    }
+
+    filtrados.push(item)
+  }
+
+  return filtrados.filter((item, index) => {
+    if (!item.section) return true
+    const proximo = filtrados.slice(index + 1).find(candidate => !candidate.section)
+    return Boolean(proximo)
+  })
 }
 
-const menu: MenuItem[] = [
-  { label: 'Home', icon: Home, path: '/' },
-  { label: 'Cadastros', icon: Users, children: [
-    { label: 'Comprador',       path: '/cadastros/compradores' },
-    { label: 'Vendedor',        path: '/cadastros/vendedores' },
-    { label: 'Modalidade',     path: '/configuracoes?tab=modalidades' },
-    { label: 'Construtora',     path: '/configuracoes?tab=construtoras' },
-    { label: 'Empreendimento',  path: '/configuracoes?tab=empreendimentos' },
-    { label: 'Banco',           path: '/configuracoes?tab=bancos' },
-    { label: 'Agência',         path: '/configuracoes?tab=agencias' },
-    { label: 'Imóvel',          path: '/configuracoes?tab=imoveis' },
-    { label: 'Imobiliária',     path: '/configuracoes?tab=imobiliarias' },
-    { label: 'Corretor',        path: '/configuracoes?tab=corretores' },
-    { label: 'Parceiro',        path: '/configuracoes?tab=parceiros' },
-    { label: 'Subestabelecido', path: '/configuracoes?tab=subestabelecidos' },
-  ]},
-  { label: 'Configurações', icon: Settings, children: [
-    { label: 'Situação',    path: '/configuracoes?tab=situacoes' },
-    { label: 'Etapa',      path: '/configuracoes?tab=etapas' },
-    { label: 'Fluxo',      path: '/configuracoes?tab=fluxos' },
-    { label: 'Documentos', path: '/configuracoes?tab=documentosTipos' },
-  ]},
-  { label: 'financiamento', section: 'true' },
-  { label: 'Processo',    icon: FileText, path: '/financiamento/processos' },
-  { label: 'Pré-Análise', icon: Search,   path: '/financiamento/pre-analise' },
-  { label: 'financeiro', section: 'true' },
-  { label: 'Cadastros', icon: Building, children: [
-    { label: 'Tipo de Despesa', path: '/configuracoes?tab=finTipoDespesas' },
-    { label: 'Tipo de Receita', path: '/configuracoes?tab=finTipoReceitas' },
-    { label: 'Devedor',         path: '/configuracoes?tab=finDevedores' },
-    { label: 'Fornecedor',      path: '/configuracoes?tab=finFornecedores' },
-    { label: 'Natureza',        path: '/configuracoes?tab=finNaturezas' },
-    { label: 'Conta',           path: '/configuracoes?tab=finContas' },
-    { label: 'Empresa',         path: '/configuracoes?tab=finEmpresas' },
-  ]},
-  { label: 'Contas a Pagar',   icon: DollarSign, path: '/financeiro/contas-pagar' },
-  { label: 'Contas a Receber', icon: DollarSign, path: '/financeiro/contas-receber' },
-  { label: 'Fluxo de Caixa',   icon: BarChart2,  path: '/financeiro/fluxo-caixa' },
-  { label: 'Relatórios Fin.', icon: BarChart2, children: [
-    { label: 'Contas a Pagar',   path: '/relatorios/financeiro?tipo=pagar' },
-    { label: 'Contas a Receber', path: '/relatorios/financeiro?tipo=receber' },
-    { label: 'Fluxo de Caixa',   path: '/relatorios/financeiro?tipo=fluxo' },
-  ]},
-  { label: 'segurança', section: 'true' },
-  { label: 'Usuário',     icon: User,          path: '/seguranca/usuarios' },
-  { label: 'Advertência', icon: AlertTriangle,  path: '/seguranca/advertencias' },
-  { label: 'Aviso',       icon: Bell,           path: '/seguranca/avisos' },
-  { label: 'Tarefas',     icon: CheckSquare,    path: '/seguranca/tarefas' },
-  { label: 'Relatórios',  icon: BarChart2, children: [
-    { label: 'Processos por Etapa', path: '/relatorios/processos' },
-    { label: 'Produção',            path: '/relatorios/producao' },
-    { label: 'Parceiro',            path: '/relatorios/parceiro' },
-    { label: 'Tarefas',             path: '/relatorios/tarefas' },
-  ]},
-  { label: 'arquivos', section: 'true' },
-  { label: 'Meus Arquivos', icon: Folder, path: '/arquivos' },
-]
+function itemAtivo(item: SidebarMenuItem, pathname: string): boolean {
+  if (item.path) {
+    return item.path === '/' ? pathname === '/' : pathname.startsWith(item.path.split('?')[0])
+  }
+  return item.children?.some(child => itemAtivo(child, pathname)) || false
+}
 
-function MenuItem({ item, depth = 0 }: { item: MenuItem; depth?: number }) {
+type OpenMenus = Record<number, string | undefined>
+
+function MenuItem({
+  item,
+  depth = 0,
+  openMenus,
+  setOpenMenus,
+}: {
+  item: SidebarMenuItem
+  depth?: number
+  openMenus: OpenMenus
+  setOpenMenus: (menus: OpenMenus) => void
+}) {
   const location = useLocation()
-  const [open, setOpen] = useState(false)
+  const key = `${depth}:${item.path || item.label}`
+  const open = openMenus[depth] === key
+
+  const closeMenus = () => setOpenMenus({})
+
+  const openExternal = (url: string) => {
+    window.open(url, '_blank', 'popup=yes,width=1200,height=800,noopener,noreferrer')
+    closeMenus()
+  }
 
   if (item.section) return (
     <li className="px-4 pt-4 pb-1">
@@ -82,28 +79,60 @@ function MenuItem({ item, depth = 0 }: { item: MenuItem; depth?: number }) {
   )
 
   if (item.children) {
-    const active = item.children.some(c => c.path && location.pathname.startsWith(c.path.split('?')[0]))
+    const active = itemAtivo(item, location.pathname)
     return (
-      <li>
-        <button onClick={() => setOpen(o => !o)}
+      <li className="relative">
+        <button
+          onClick={() => {
+            if (open) {
+              setOpenMenus(Object.fromEntries(Object.entries(openMenus).filter(([level]) => Number(level) < depth)))
+              return
+            }
+            setOpenMenus({
+              ...Object.fromEntries(Object.entries(openMenus).filter(([level]) => Number(level) < depth)),
+              [depth]: key,
+            })
+          }}
           className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors
+            ${depth > 0 ? 'min-w-56' : ''}
             ${active ? 'bg-blue-700 text-white' : 'text-blue-100 hover:bg-blue-800'}`}>
           <span className="flex items-center gap-2">
             {item.icon && <item.icon size={15} />}{item.label}
           </span>
-          {open ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}
+          <ChevronRight size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`}/>
         </button>
-        {open && <ul className="bg-blue-950">{item.children.map((c,i) => <MenuItem key={i} item={c} depth={depth+1}/>)}</ul>}
+        {open && (
+          <ul className="absolute left-full top-0 z-50 min-w-56 rounded-r-lg border border-blue-800 bg-blue-950 py-1 shadow-2xl">
+            {item.children.map((c,i) => (
+              <MenuItem key={`${key}:${i}`} item={c} depth={depth+1} openMenus={openMenus} setOpenMenus={setOpenMenus}/>
+            ))}
+          </ul>
+        )}
       </li>
     )
   }
 
   const active = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path||'__')
+  if (item.externalUrl) {
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={() => openExternal(item.externalUrl!)}
+          className={`flex w-full items-center gap-2 py-2 text-left text-sm text-blue-100 transition-colors hover:bg-blue-800
+            ${depth>0?'px-4 min-w-56':'px-4'}`}>
+          {item.icon && <item.icon size={15}/>}{item.label}
+        </button>
+      </li>
+    )
+  }
+
   return (
     <li>
       <Link to={item.path||'/'} className={`flex items-center gap-2 py-2 text-sm transition-colors
-        ${depth>0?'pl-8 pr-4':'px-4'}
-        ${active ? 'bg-blue-600 text-white font-medium' : 'text-blue-100 hover:bg-blue-800'}`}>
+        ${depth>0?'px-4 min-w-56':'px-4'}
+        ${active ? 'bg-blue-600 text-white font-medium' : 'text-blue-100 hover:bg-blue-800'}`}
+        onClick={closeMenus}>
         {item.icon && <item.icon size={15}/>}{item.label}
       </Link>
     </li>
@@ -112,58 +141,51 @@ function MenuItem({ item, depth = 0 }: { item: MenuItem; depth?: number }) {
 
 export function Layout() {
   const { usuario, logout } = useAuth()
+  const { pode, isExterno } = usePermissoes()
   const navigate = useNavigate()
   const [sidebar, setSidebar] = useState(true)
-  const [busca, setBusca] = useState('')
   const [dropUser, setDropUser] = useState(false)
+  const [openMenus, setOpenMenus] = useState<OpenMenus>({})
 
-  const handleBusca = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && busca.trim()) {
-      navigate(`/financiamento/processos?busca=${encodeURIComponent(busca)}`)
-      setBusca('')
-    }
-  }
+  const menuVisivel = filtrarMenu(menu, pode)
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
-      <aside className={`${sidebar?'w-56':'w-0'} bg-blue-900 flex-shrink-0 overflow-hidden transition-all duration-300 flex flex-col`}>
-        <div className="p-4 border-b border-blue-800 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-              <span className="text-blue-900 font-bold text-xs">A</span>
-            </div>
-            <div>
-              <div className="text-white font-bold text-sm">AMARANTE</div>
-              <div className="text-blue-300 text-xs">Serviços Financeiros</div>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 overflow-y-auto py-2">
-          <ul>{menu.map((item,i) => <MenuItem key={i} item={item}/>)}</ul>
+      <aside className={`${sidebar?'w-56 overflow-visible':'w-0 overflow-hidden'} bg-blue-900 flex-shrink-0 transition-all duration-300 flex flex-col relative z-40`}>
+        <Link
+          to="/"
+          onClick={() => setOpenMenus({})}
+          className="h-16 px-4 border-b border-blue-800 flex-shrink-0 flex items-center hover:bg-blue-800 transition-colors"
+          aria-label="Voltar para a Home">
+          <img
+            src={logoAmarante}
+            alt="Amarante"
+            className="h-10 w-full object-contain object-left"
+          />
+        </Link>
+        <nav className="flex-1 overflow-visible py-2">
+          <ul>{menuVisivel.map((item,i) => <MenuItem key={i} item={item} openMenus={openMenus} setOpenMenus={setOpenMenus}/>)}</ul>
         </nav>
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-blue-900 text-white px-4 py-2 flex items-center gap-3 shadow-md flex-shrink-0">
-          <button onClick={() => setSidebar(s=>!s)} className="hover:text-blue-200 transition-colors">
+          <button onClick={() => { setSidebar(s=>!s); setOpenMenus({}) }} className="hover:text-blue-200 transition-colors">
             {sidebar ? <X size={20}/> : <Menu size={20}/>}
           </button>
 
           <div className="flex-1 max-w-md">
-            <div className="flex items-center bg-blue-800 rounded px-3 py-1.5 gap-2">
-              <Search size={15} className="text-blue-300"/>
-              <input type="text" placeholder="Nome ou CPF..." value={busca}
-                onChange={e=>setBusca(e.target.value)} onKeyDown={handleBusca}
-                className="bg-transparent text-white placeholder-blue-300 text-sm outline-none flex-1 w-full"/>
-            </div>
+            <QuickProcessSearch />
           </div>
 
-          <Link to="/bater-ponto"
-            className="bg-blue-700 hover:bg-blue-600 px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors">
-            <Clock size={15}/>Bater Ponto
-          </Link>
+          {!isExterno && (
+            <Link to="/bater-ponto"
+              className="bg-blue-700 hover:bg-blue-600 px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors">
+              <Clock size={15}/>Bater Ponto
+            </Link>
+          )}
 
           <div className="relative">
             <button onClick={() => setDropUser(d=>!d)}
@@ -194,6 +216,7 @@ export function Layout() {
         <main className="flex-1 overflow-y-auto p-6">
           <Outlet/>
         </main>
+        <ChatWidget />
       </div>
     </div>
   )

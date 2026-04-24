@@ -1,5 +1,5 @@
 import { fmtDateBR } from "../../lib/dateUtils"
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
 import { PageHeader, Card, Button, Select, Input, Table, Loading, Badge } from '../../components/ui'
@@ -11,30 +11,13 @@ export function RelTarefas() {
     dataInicio: new Date(new Date().setDate(1)).toISOString().slice(0,10),
     dataFim:    new Date().toISOString().slice(0,10),
   })
+  const [ativos, setAtivos] = useState<any>(filtros)
   const usuariosList = trpc.cadastros.usuarios.listar.useQuery()
   const parceiros    = trpc.cadastros.parceiros.listar.useQuery()
-  const { data, isLoading } = trpc.tarefas.minhasTarefas.useQuery()
+  const { data, isLoading } = trpc.tarefas.listarTodas.useQuery({ ...ativos, pagina: 1 })
 
   function setF(k:string,v:any) { setFiltros((f:any)=>({...f,[k]:v})) }
-
-  const todasTarefas = useMemo(() => {
-    const all = [...(data?.recebidas||[]), ...(data?.criadas||[])]
-    return all.filter((t:any) => {
-      if (filtros.id && t.id !== filtros.id) return false
-      if (filtros.status && t.status !== filtros.status) return false
-      if (filtros.solicitanteId && t.solicitanteId !== filtros.solicitanteId) return false
-      if (filtros.executanteId && t.executanteId !== filtros.executanteId) return false
-      if (filtros.dataInicio) {
-        const dt = new Date(t.criadoEm).toISOString().slice(0,10)
-        if (dt < filtros.dataInicio) return false
-      }
-      if (filtros.dataFim) {
-        const dt = new Date(t.criadoEm).toISOString().slice(0,10)
-        if (dt > filtros.dataFim) return false
-      }
-      return true
-    })
-  }, [data, filtros])
+  const todasTarefas = data || []
 
   function handleExport() {
     if (!todasTarefas.length) return
@@ -74,7 +57,7 @@ export function RelTarefas() {
           <Select label="Executante" value={filtros.executanteId||''} onChange={e=>setF('executanteId',Number(e.target.value)||undefined)}
             options={(usuariosList.data||[]).map((u:any)=>({value:u.id,label:u.nome}))} />
         </div>
-        <div className="mt-3"><Button>Gerar</Button></div>
+        <div className="mt-3"><Button onClick={() => setAtivos(filtros)}>Gerar</Button></div>
       </Card>
 
       <Card>

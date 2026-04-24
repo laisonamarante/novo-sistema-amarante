@@ -50,6 +50,8 @@ pnpm build
 pnpm start
 ```
 
+O servidor de produção usa as variáveis do arquivo `.env` do ambiente. Não coloque senhas, tokens ou `JWT_SECRET` dentro de arquivos versionados.
+
 ## Módulos
 
 | Módulo | Status |
@@ -60,17 +62,15 @@ pnpm start
 | Cadastro Vendedor | ✅ |
 | Processo de Financiamento | ✅ |
 | Pré-Análise | ✅ |
-| Contas a Pagar | ✅ |
-| Contas a Receber | ✅ |
-| Fluxo de Caixa | ✅ |
+| Financeiro | Pausado |
 | Tarefas | ✅ |
 | Bater Ponto | ✅ |
 | Usuários | ✅ |
-| Configurações | 🔧 |
-| Relatórios | 🔧 |
-| Arquivos | 🔧 |
+| Configurações | ✅ |
+| Relatórios | ✅ |
+| Arquivos | ✅ |
 
 ## Acessos padrão (após seed)
 - **Admin:** login `laison` / senha `123456`
-- **Porta servidor:** 3001
+- **Porta servidor:** 3050
 - **Porta frontend:** 5173

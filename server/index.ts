@@ -10,17 +10,26 @@ import jwt from 'jsonwebtoken'
 const app = express()
 const PORT = process.env.PORT || 3050
 
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://34.28.158.70',
-  'http://34.28.158.70:3000',
-  'http://34.28.158.70:3060',
-  'http://100.96.30.33:3000',
-  'http://100.96.30.33:3060',
-  'http://localhost:5173',
+function normalizarOrigem(origin: string) {
+  return origin.trim().replace(/\/$/, '')
+}
+
+const configuredOrigins = [
+  process.env.CLIENT_URL,
+  ...(process.env.CORS_ORIGINS || '').split(','),
 ]
+  .filter((origin): origin is string => Boolean(origin?.trim()))
+  .map(normalizarOrigem)
+
+const devOrigins = process.env.NODE_ENV === 'production'
+  ? []
+  : ['http://localhost:5173', 'http://127.0.0.1:5173']
+
+const allowedOrigins = Array.from(new Set([...configuredOrigins, ...devOrigins]))
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.some(o => origin.startsWith(o))) cb(null, true)
+    if (!origin || allowedOrigins.includes(normalizarOrigem(origin))) cb(null, true)
     else cb(null, false)
   },
   credentials: true,

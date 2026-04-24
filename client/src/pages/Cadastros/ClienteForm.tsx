@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
-import { Input, Select, Btn, Card, Spinner, Alert } from '../../components/ui'
-import { ArrowLeft, Save } from 'lucide-react'
+import { usePermissoes } from '../../lib/permissoes'
+import { Input, Select, Btn, Spinner, Alert } from '../../components/ui'
+import { Save, X } from 'lucide-react'
 
 const estadosCivis = ['Solteiro','Casado Comunhão de Bens','Casado Comunhão Parcial de Bens','Casado separação de Bens','Divorciado','Separado Judicialmente','União Estável/Outros','Viúvo'].map(v=>({value:v,label:v}))
 const tiposDoc    = ['Carteira de Identidade','Carteira Funcional','Identidade Militar','Cart. Identidade e Estrangeiro','Passaporte','CNH','CPF'].map(v=>({value:v,label:v}))
@@ -10,9 +11,19 @@ const ufs         = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS'
 
 type Aba = 'dadosGerais'|'endereco'|'contato'|'dadosBancarios'|'vinculo'
 
-export function ClienteForm({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
-  const { id } = useParams()
+type ClienteFormProps = {
+  tipo: 'Comprador' | 'Vendedor'
+  clienteId?: number | 'novo'
+  modoPopup?: boolean
+  onClose?: () => void
+  onSaved?: () => void
+}
+
+export function ClienteForm({ tipo, clienteId, modoPopup = false, onClose, onSaved }: ClienteFormProps) {
+  const { perfil, isExterno } = usePermissoes()
+  const { id: idRota } = useParams()
   const navigate = useNavigate()
+  const id = clienteId !== undefined ? String(clienteId) : idRota
   const isEdicao = Boolean(id && id !== 'novo')
   const base = tipo === 'Comprador' ? '/cadastros/compradores' : '/cadastros/vendedores'
 
@@ -68,6 +79,15 @@ export function ClienteForm({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
 
   const f = (field: string) => (e: React.ChangeEvent<any>) => setForm(prev => ({...prev, [field]: e.target.value}))
 
+  const mostrarVinculo = (campo: 'construtora' | 'corretor' | 'parceiro' | 'imobiliaria') => {
+    if (!isExterno) return true
+    if ((perfil === 'Parceiro' || perfil === 'Subestabelecido') && campo === 'parceiro') return false
+    if (perfil === 'Corretor' && ['parceiro', 'corretor', 'imobiliaria'].includes(campo)) return false
+    if (perfil === 'Imobiliária' && ['parceiro', 'imobiliaria'].includes(campo)) return false
+    if (perfil === 'Construtora' && ['parceiro', 'construtora'].includes(campo)) return false
+    return true
+  }
+
   const handleErroAPI = (error: any) => {
     const msg = error?.message || error?.data?.message || 'Erro ao salvar. Tente novamente.'
     setErro(msg)
@@ -76,15 +96,21 @@ export function ClienteForm({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
   const criar    = trpc.clientes.criar.useMutation({
     onSuccess: () => {
       utils.clientes.listar.invalidate();
-      navigate(base);
+      onSaved?.();
+      if (modoPopup) onClose?.();
+      else navigate(base);
     },
     onError: handleErroAPI,
   })
   const atualizar = trpc.clientes.atualizar.useMutation({
     onSuccess: () => {
       utils.clientes.listar.invalidate();
-      setSucesso('Salvo com sucesso!');
-      setTimeout(() => setSucesso(''), 3000);
+      onSaved?.();
+      if (modoPopup) onClose?.();
+      else {
+        setSucesso('Salvo com sucesso!');
+        setTimeout(() => setSucesso(''), 3000);
+      }
     },
     onError: handleErroAPI,
   })
@@ -121,6 +147,11 @@ export function ClienteForm({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
     else criar.mutate(cleaned)
   }
 
+  const handleCancelar = () => {
+    if (modoPopup) onClose?.()
+    else navigate(base)
+  }
+
   const abas: { id: Aba; label: string }[] = [
     { id:'dadosGerais',   label:'Dados Gerais' },
     { id:'endereco',      label:'Endereço' },
@@ -131,119 +162,153 @@ export function ClienteForm({ tipo }: { tipo: 'Comprador' | 'Vendedor' }) {
 
   if (isEdicao && cliente.isLoading) return <div className="flex justify-center py-12"><Spinner/></div>
 
+  const formulario = (
+    <>
+      {/* Abas */}
+      <div className="border-b flex overflow-x-auto">
+        {abas.map(a => (
+          <button key={a.id} onClick={() => setAba(a.id)}
+            className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2
+              ${aba===a.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            {a.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={modoPopup ? 'p-4 sm:p-5' : 'p-6'}>
+        {/* Dados Gerais */}
+        {aba === 'dadosGerais' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <Input label="Nome *" value={form.nome} onChange={f('nome')} placeholder="Nome completo"/>
+            </div>
+            <Input label="CPF/CNPJ *" mask="cpfCnpj" value={form.cpfCnpj} onChange={f('cpfCnpj')}/>
+            <Input label="Data de Nascimento *" type="date" value={form.dataNascimento} onChange={f('dataNascimento')}/>
+            <Select label="Estado Civil" value={form.estadoCivil} onChange={f('estadoCivil')} options={estadosCivis} placeholder="Selecione..."/>
+            <Select label="Documento de Identificação" value={form.tipoDocumento} onChange={f('tipoDocumento')} options={tiposDoc} placeholder="Selecione..."/>
+            <Input label="Número do Documento" value={form.numeroDocumento} onChange={f('numeroDocumento')}/>
+            <Input label="Data de Expedição" type="date" value={form.dataExpedicao} onChange={f('dataExpedicao')}/>
+            <Input label="Órgão Expedidor" value={form.orgaoExpedidor} onChange={f('orgaoExpedidor')}/>
+            <Input label="Captação" value={form.captacao} onChange={f('captacao')}/>
+            <Input label="Valor de Renda Comprovada" value={form.rendaComprovada} onChange={f('rendaComprovada')}/>
+            <div className="flex items-center gap-2 mt-6">
+              <input type="checkbox" id="dep" checked={form.possuiDependentes} onChange={e=>setForm(p=>({...p,possuiDependentes:e.target.checked}))} className="rounded"/>
+              <label htmlFor="dep" className="text-sm text-gray-700">Possui dependentes?</label>
+            </div>
+            {(form.estadoCivil==='Casado Comunhão de Bens'||form.estadoCivil==='Casado Comunhão Parcial de Bens'||form.estadoCivil==='Casado separação de Bens'||form.estadoCivil==='União Estável/Outros') && (
+              <>
+                <Input label="CPF Cônjuge" mask="cpf" value={form.cpfConjuge} onChange={f('cpfConjuge')}/>
+                <Input label="Nome do Cônjuge" value={form.nomeConjuge} onChange={f('nomeConjuge')}/>
+              </>
+            )}
+            <Input label="Nome da Mãe" value={form.nomeMae} onChange={f('nomeMae')}/>
+          </div>
+        )}
+
+        {/* Endereço */}
+        {aba === 'endereco' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <Input label="Endereço" value={form.endereco} onChange={f('endereco')}/>
+            </div>
+            <Input label="Número" value={form.numero} onChange={f('numero')}/>
+            <Input label="Bairro" value={form.bairro} onChange={f('bairro')}/>
+            <Input label="Cidade" value={form.cidade} onChange={f('cidade')}/>
+            <Select label="UF" value={form.uf} onChange={f('uf')} options={ufs} placeholder="UF"/>
+            <Input label="CEP" value={form.cep} onChange={f('cep')}/>
+          </div>
+        )}
+
+        {/* Contato */}
+        {aba === 'contato' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Fone 1 *" value={form.fone1} onChange={f('fone1')}/>
+            <Input label="Fone 2" value={form.fone2} onChange={f('fone2')}/>
+            <Input label="Contato 2" value={form.contato2} onChange={f('contato2')}/>
+            <Input label="Fone 3" value={form.fone3} onChange={f('fone3')}/>
+            <Input label="Contato 3" value={form.contato3} onChange={f('contato3')}/>
+            <Input label="E-mail *" type="email" value={form.email} onChange={f('email')}/>
+          </div>
+        )}
+
+        {/* Dados Bancários */}
+        {aba === 'dadosBancarios' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select label="Banco" value={form.bancoId} onChange={e=>setForm(p=>({...p,bancoId:Number(e.target.value)}))}
+              options={(bancos.data||[]).map(b=>({value:b.id,label:b.nome}))} placeholder="Selecione..."/>
+            <Input label="Número da Agência" value={form.numeroAgencia} onChange={f('numeroAgencia')}/>
+            <Input label="Número da Conta" value={form.numeroConta} onChange={f('numeroConta')}/>
+          </div>
+        )}
+
+        {/* Vínculo */}
+        {aba === 'vinculo' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {mostrarVinculo('construtora') && (
+              <Select label="Construtora" value={form.constutoraId} onChange={e=>setForm(p=>({...p,constutoraId:Number(e.target.value)}))}
+                options={(construtoras.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
+            )}
+            {mostrarVinculo('corretor') && (
+              <Select label="Corretor" value={form.corretorId} onChange={e=>setForm(p=>({...p,corretorId:Number(e.target.value)}))}
+                options={(corretores.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
+            )}
+            {mostrarVinculo('parceiro') && (
+              <Select label="Parceiro" value={form.parceiroId} onChange={e=>setForm(p=>({...p,parceiroId:Number(e.target.value)}))}
+                options={(parceiros.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
+            )}
+            {mostrarVinculo('imobiliaria') && (
+              <Select label="Imobiliária" value={form.imobiliariaId} onChange={e=>setForm(p=>({...p,imobiliariaId:Number(e.target.value)}))}
+                options={(imobiliarias.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  )
+
+  const titulo = isEdicao ? `Editar ${tipo}` : `Novo ${tipo}`
+
+  if (!modoPopup) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="absolute inset-0" onClick={handleCancelar}/>
+        <div className="relative z-10 bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+          <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-gray-200">
+            <div className="min-w-0">
+              <h2 className="font-semibold text-gray-800 text-base truncate">
+                {titulo}
+                {isEdicao && cliente.data && <span className="text-blue-600 ml-2">: {cliente.data.nome}</span>}
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Btn variant="ghost" onClick={handleCancelar}>Cancelar</Btn>
+              <Btn icon={<Save size={15}/>} loading={criar.isPending || atualizar.isPending} onClick={handleSalvar}>Salvar</Btn>
+              <button type="button" onClick={handleCancelar} className="text-gray-400 hover:text-gray-700 w-8 h-8 flex items-center justify-center" title="Fechar">
+                <X size={18}/>
+              </button>
+            </div>
+          </div>
+          <div className="overflow-y-auto flex-1 px-6 py-4">
+            {erro    && <Alert type="error"   message={erro}    />}
+            {sucesso && <Alert type="success" message={sucesso} />}
+            <div className="border border-gray-200 rounded-lg overflow-hidden mt-4">{formulario}</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
-      {/* Cabeçalho */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link to={base} className="text-gray-500 hover:text-gray-700"><ArrowLeft size={20}/></Link>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-gray-800">
-            {isEdicao ? `Editar ${tipo}` : `Novo ${tipo}`}
-            {isEdicao && cliente.data && <span className="text-blue-600 ml-2">: {cliente.data.nome}</span>}
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          <Link to={base}><Btn variant="ghost">Cancelar</Btn></Link>
-          <Btn icon={<Save size={15}/>} loading={criar.isPending || atualizar.isPending} onClick={handleSalvar}>Salvar</Btn>
-        </div>
+      <div className="flex justify-end gap-2 mb-4">
+        <Btn variant="ghost" onClick={handleCancelar}>Cancelar</Btn>
+        <Btn icon={<Save size={15}/>} loading={criar.isPending || atualizar.isPending} onClick={handleSalvar}>Salvar</Btn>
       </div>
 
       {erro    && <Alert type="error"   message={erro}    />}
       {sucesso && <Alert type="success" message={sucesso} />}
 
-      <Card className="mt-4">
-        {/* Abas */}
-        <div className="border-b flex overflow-x-auto">
-          {abas.map(a => (
-            <button key={a.id} onClick={() => setAba(a.id)}
-              className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2
-                ${aba===a.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-              {a.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="p-6">
-          {/* Dados Gerais */}
-          {aba === 'dadosGerais' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <Input label="Nome *" value={form.nome} onChange={f('nome')} placeholder="Nome completo"/>
-              </div>
-              <Input label="CPF/CNPJ *" value={form.cpfCnpj} onChange={f('cpfCnpj')}/>
-              <Input label="Data de Nascimento *" type="date" value={form.dataNascimento} onChange={f('dataNascimento')}/>
-              <Select label="Estado Civil" value={form.estadoCivil} onChange={f('estadoCivil')} options={estadosCivis} placeholder="Selecione..."/>
-              <Select label="Documento de Identificação" value={form.tipoDocumento} onChange={f('tipoDocumento')} options={tiposDoc} placeholder="Selecione..."/>
-              <Input label="Número do Documento" value={form.numeroDocumento} onChange={f('numeroDocumento')}/>
-              <Input label="Data de Expedição" type="date" value={form.dataExpedicao} onChange={f('dataExpedicao')}/>
-              <Input label="Órgão Expedidor" value={form.orgaoExpedidor} onChange={f('orgaoExpedidor')}/>
-              <Input label="Captação" value={form.captacao} onChange={f('captacao')}/>
-              <Input label="Valor de Renda Comprovada" value={form.rendaComprovada} onChange={f('rendaComprovada')}/>
-              <div className="flex items-center gap-2 mt-6">
-                <input type="checkbox" id="dep" checked={form.possuiDependentes} onChange={e=>setForm(p=>({...p,possuiDependentes:e.target.checked}))} className="rounded"/>
-                <label htmlFor="dep" className="text-sm text-gray-700">Possui dependentes?</label>
-              </div>
-              {(form.estadoCivil==='Casado Comunhão de Bens'||form.estadoCivil==='Casado Comunhão Parcial de Bens'||form.estadoCivil==='Casado separação de Bens'||form.estadoCivil==='União Estável/Outros') && (
-                <>
-                  <Input label="CPF Cônjuge" value={form.cpfConjuge} onChange={f('cpfConjuge')}/>
-                  <Input label="Nome do Cônjuge" value={form.nomeConjuge} onChange={f('nomeConjuge')}/>
-                </>
-              )}
-              <Input label="Nome da Mãe" value={form.nomeMae} onChange={f('nomeMae')}/>
-            </div>
-          )}
-
-          {/* Endereço */}
-          {aba === 'endereco' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <Input label="Endereço" value={form.endereco} onChange={f('endereco')}/>
-              </div>
-              <Input label="Número" value={form.numero} onChange={f('numero')}/>
-              <Input label="Bairro" value={form.bairro} onChange={f('bairro')}/>
-              <Input label="Cidade" value={form.cidade} onChange={f('cidade')}/>
-              <Select label="UF" value={form.uf} onChange={f('uf')} options={ufs} placeholder="UF"/>
-              <Input label="CEP" value={form.cep} onChange={f('cep')}/>
-            </div>
-          )}
-
-          {/* Contato */}
-          {aba === 'contato' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Fone 1 *" value={form.fone1} onChange={f('fone1')}/>
-              <Input label="Fone 2" value={form.fone2} onChange={f('fone2')}/>
-              <Input label="Contato 2" value={form.contato2} onChange={f('contato2')}/>
-              <Input label="Fone 3" value={form.fone3} onChange={f('fone3')}/>
-              <Input label="Contato 3" value={form.contato3} onChange={f('contato3')}/>
-              <Input label="E-mail *" type="email" value={form.email} onChange={f('email')}/>
-            </div>
-          )}
-
-          {/* Dados Bancários */}
-          {aba === 'dadosBancarios' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Select label="Banco" value={form.bancoId} onChange={e=>setForm(p=>({...p,bancoId:Number(e.target.value)}))}
-                options={(bancos.data||[]).map(b=>({value:b.id,label:b.nome}))} placeholder="Selecione..."/>
-              <Input label="Número da Agência" value={form.numeroAgencia} onChange={f('numeroAgencia')}/>
-              <Input label="Número da Conta" value={form.numeroConta} onChange={f('numeroConta')}/>
-            </div>
-          )}
-
-          {/* Vínculo */}
-          {aba === 'vinculo' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Select label="Construtora" value={form.constutoraId} onChange={e=>setForm(p=>({...p,constutoraId:Number(e.target.value)}))}
-                options={(construtoras.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
-              <Select label="Corretor" value={form.corretorId} onChange={e=>setForm(p=>({...p,corretorId:Number(e.target.value)}))}
-                options={(corretores.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
-              <Select label="Parceiro" value={form.parceiroId} onChange={e=>setForm(p=>({...p,parceiroId:Number(e.target.value)}))}
-                options={(parceiros.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
-              <Select label="Imobiliária" value={form.imobiliariaId} onChange={e=>setForm(p=>({...p,imobiliariaId:Number(e.target.value)}))}
-                options={(imobiliarias.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
-            </div>
-          )}
-        </div>
-      </Card>
+      <div className="border border-gray-200 rounded-lg overflow-hidden">{formulario}</div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, int, decimal, text, boolean, datetime, date, mysqlEnum, index, primaryKey, tinyint } from 'drizzle-orm/mysql-core'
+import { mysqlTable, varchar, int, decimal, text, boolean, datetime, date, mysqlEnum, index, primaryKey } from 'drizzle-orm/mysql-core'
 
 // ============================================================
 // SEGURANÇA
@@ -11,7 +11,7 @@ export const usuarios = mysqlTable('usuarios', {
   email:     varchar('email', { length: 100 }),
   cpf:       varchar('cpf', { length: 20 }),
   pis:       varchar('pis', { length: 20 }),
-  perfil:    mysqlEnum('perfil', ['Administrador','Analista','Gerente','Corretor','Imobiliária','Parceiro','Construtora','Financeiro','Engenheiro','Atendente','Subestabelecido']).notNull().default('Analista'),
+  perfil:    mysqlEnum('perfil', ['Administrador','Analista','Gerente','Corretor','Imobiliária','Parceiro','Construtora','Subestabelecido']).notNull().default('Analista'),
   subestabelecidoId: int('subestabelecido_id'), // FK → subestabelecidos.id (circular ref, enforced by DB)
   bloqueioInicio: date('bloqueio_inicio'),
   bloqueioFim:    date('bloqueio_fim'),
@@ -199,6 +199,11 @@ export const imoveis = mysqlTable('imoveis', {
   uf:          varchar('uf', { length: 2 }).notNull(),
   cep:         varchar('cep', { length: 10 }),
   tipo:        mysqlEnum('tipo', ['Residencial','Comercial','Terreno','Galpão']).default('Residencial'),
+  corretorId:    int('corretor_id').references(() => corretores.id),
+  imobiliariaId: int('imobiliaria_id').references(() => imobiliarias.id),
+  parceiroId:    int('parceiro_id').references(() => parceiros.id),
+  constutoraId:  int('construtora_id').references(() => construtoras.id),
+  usuarioId:     int('usuario_id').references(() => usuarios.id),
   criadoEm:    datetime('criado_em').notNull().default(new Date()),
 })
 
@@ -235,6 +240,7 @@ export const etapas = mysqlTable('etapas', {
 export const fluxos = mysqlTable('fluxos', {
   id:   int('id').primaryKey().autoincrement(),
   nome: varchar('nome', { length: 100 }).notNull(),
+  externo: boolean('externo').notNull().default(false),
   ativo: boolean('ativo').notNull().default(true),
 })
 
@@ -272,12 +278,14 @@ export const processos = mysqlTable('processos', {
   dataAssinatura:        date('data_assinatura'),
   dataPagtoVendedor:     date('data_pagto_vendedor'),
   dataRemuneracao:       date('data_remuneracao'),
+  dataPagtoComissao:     date('data_pagto_comissao'),
   numProposta:           varchar('num_proposta', { length: 50 }),
   numContrato:           varchar('num_contrato', { length: 50 }),
   observacao:            text('observacao'),
   reprovado:             boolean('reprovado').notNull().default(false),
   arquivado:             boolean('arquivado').notNull().default(false),
   pausado:               boolean('pausado').notNull().default(false),
+  cadastroInicialCompleto: boolean('cadastro_inicial_completo').notNull().default(true),
   // Valores
   valorCompraVenda:      decimal('valor_compra_venda', { precision: 15, scale: 2 }).default('0.00'),
   valorAvaliacao:        decimal('valor_avaliacao', { precision: 15, scale: 2 }).default('0.00'),
@@ -292,7 +300,7 @@ export const processos = mysqlTable('processos', {
   remuneracaoPerc:       decimal('remuneracao_perc', { precision: 5, scale: 2 }).default('0.00'),
   remuneracaoValor:      decimal('remuneracao_valor', { precision: 12, scale: 2 }).default('0.00'),
   taxa:                  decimal('taxa', { precision: 5, scale: 2 }).default('0.00'),
-  tipoAmortizacao:       mysqlEnum('tipo_amortizacao', ['SAC','PRICE']),
+  tipoAmortizacao:       mysqlEnum('tipo_amortizacao', ['SAC','PRICE']).default('PRICE'),
   tipoImovel:            mysqlEnum('tipo_imovel_processo', ['Novo','Usado']),
   // Vínculos
   parceiroId:            int('parceiro_id').references(() => parceiros.id),
@@ -313,7 +321,7 @@ export const processos = mysqlTable('processos', {
 export const processoCompradores = mysqlTable('processo_compradores', {
   processoId: int('processo_id').notNull().references(() => processos.id),
   clienteId:  int('cliente_id').notNull().references(() => clientes.id),
-  proponente: tinyint('proponente').default(0),
+  proponente: boolean('proponente').default(false),
 }, (t) => ({
   pk: primaryKey({ columns: [t.processoId, t.clienteId] }),
 }))
@@ -322,7 +330,7 @@ export const processoCompradores = mysqlTable('processo_compradores', {
 export const processoVendedores = mysqlTable('processo_vendedores', {
   processoId: int('processo_id').notNull().references(() => processos.id),
   clienteId:  int('cliente_id').notNull().references(() => clientes.id),
-  proponente: tinyint('proponente').default(0),
+  proponente: boolean('proponente').default(false),
 }, (t) => ({
   pk: primaryKey({ columns: [t.processoId, t.clienteId] }),
 }))
@@ -371,6 +379,9 @@ export const processoDocumentos = mysqlTable('processo_documentos', {
   mimeType:        varchar('mime_type', { length: 100 }),
   tamanho:         int('tamanho'),
   secao:           varchar('secao', { length: 50 }).default('Geral'),
+  tipoVinculo:     varchar('tipo_vinculo', { length: 30 }).default('formulario'),
+  status:          varchar('status', { length: 20 }).default('pendente'),
+  motivoRecusa:    text('motivo_recusa'),
   dataValidade:    date('data_validade'),
   usuarioId:       int('usuario_id').references(() => usuarios.id),
   criadoEm:        datetime('criado_em').notNull().default(new Date()),
@@ -390,6 +401,7 @@ export const processoAtendimentos = mysqlTable('processo_atendimentos', {
 // ============================================================
 export const preAnalises = mysqlTable('pre_analises', {
   id:               int('id').primaryKey().autoincrement(),
+  processoId:       int('processo_id').references(() => processos.id),
   bancos:           varchar('bancos', { length: 100 }).notNull(), // CSV: "1,2,3"
   nome:             varchar('nome', { length: 200 }).notNull(),
   cpfCnpj:          varchar('cpf_cnpj', { length: 20 }).notNull(),
@@ -425,6 +437,37 @@ export const tarefas = mysqlTable('tarefas', {
   criadoEm:     datetime('criado_em').notNull().default(new Date()),
   resolvidoEm:  datetime('resolvido_em'),
 })
+
+// ============================================================
+// CHAT INTERNO
+// ============================================================
+export const chatConversas = mysqlTable('chat_conversas', {
+  id:          int('id').primaryKey().autoincrement(),
+  criadoPorId: int('criado_por_id').notNull().references(() => usuarios.id),
+  internoId:   int('interno_id').references(() => usuarios.id),
+  externoId:   int('externo_id').references(() => usuarios.id),
+  processoId:  int('processo_id').references(() => processos.id),
+  status:      varchar('status', { length: 20 }).notNull().default('aberta'),
+  criadoEm:    datetime('criado_em').notNull().default(new Date()),
+  atualizadoEm: datetime('atualizado_em').notNull().default(new Date()),
+}, (t) => ({
+  idxInterno: index('idx_chat_conversas_interno').on(t.internoId),
+  idxExterno: index('idx_chat_conversas_externo').on(t.externoId),
+  idxCriadoPor: index('idx_chat_conversas_criado_por').on(t.criadoPorId),
+}))
+
+export const chatMensagens = mysqlTable('chat_mensagens', {
+  id:          int('id').primaryKey().autoincrement(),
+  conversaId:  int('conversa_id').notNull().references(() => chatConversas.id),
+  remetenteId: int('remetente_id').notNull().references(() => usuarios.id),
+  texto:       text('texto').notNull(),
+  processoIdDetectado: int('processo_id_detectado').references(() => processos.id),
+  lidaEm:      datetime('lida_em'),
+  criadoEm:    datetime('criado_em').notNull().default(new Date()),
+}, (t) => ({
+  idxConversa: index('idx_chat_mensagens_conversa').on(t.conversaId),
+  idxRemetente: index('idx_chat_mensagens_remetente').on(t.remetenteId),
+}))
 
 // ============================================================
 // AVISOS E ADVERTÊNCIAS
@@ -593,6 +636,7 @@ export const arquivos = mysqlTable('arquivos', {
   id:             int('id').primaryKey().autoincrement(),
   usuarioId:      int('usuario_id').notNull().references(() => usuarios.id),
   processoId:     int('processo_id').references(() => processos.id),
+  parceiroId:     int('parceiro_id').references(() => parceiros.id),
   nomeOriginal:   varchar('nome_original', { length: 255 }).notNull(),
   nomeArquivo:    varchar('nome_arquivo', { length: 255 }).notNull(),
   caminhoArquivo: varchar('caminho_arquivo', { length: 500 }).notNull(),
@@ -637,6 +681,15 @@ export const bancoModalidades = mysqlTable('banco_modalidades', {
 }, (t) => ({
   pk: primaryKey({ columns: [t.bancoId, t.modalidadeId] }),
 }))
+
+export const fluxoDocumentos = mysqlTable('fluxo_documentos', {
+  id:              int('id').primaryKey().autoincrement(),
+  fluxoId:         int('fluxo_id').notNull().references(() => fluxos.id),
+  documentoTipoId: int('documento_tipo_id').notNull().references(() => documentosTipos.id),
+  categoria:       varchar('categoria', { length: 50 }).notNull().default('Comprador - Pessoa Física'),
+  ordem:           int('ordem').notNull().default(0),
+  obrigatorioPrimeiraEtapa: boolean('obrigatorio_primeira_etapa').notNull().default(false),
+})
 
 export const parceiroBancos = mysqlTable('parceiro_bancos', {
   parceiroId: int('parceiro_id').notNull().references(() => parceiros.id),

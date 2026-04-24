@@ -25,7 +25,7 @@ export const EQUIPE_INTERNA = [
 export const PERFIS_USUARIO = [
   'Administrador', 'Analista', 'Gerente',
   'Corretor', 'Imobiliária', 'Parceiro',
-  'Construtora', 'Financeiro',
+  'Construtora',
 ] as const
 
 // Módulos do sistema para controle de permissões
@@ -222,7 +222,15 @@ export const permissoesPerfilRouter = router({
     const perms = await ctx.db.select().from(permissoesPerfil).where(eq(permissoesPerfil.perfil, perfil))
     const map: Record<string, boolean> = {}
     perms.forEach(p => { map[p.recurso] = p.permitido })
-    return { perfil, permissoes: map }
+    return {
+      perfil,
+      permissoes: map,
+      parceiroId: ctx.usuario.parceiroId || null,
+      corretorId: ctx.usuario.corretorId || null,
+      imobiliariaId: ctx.usuario.imobiliariaId || null,
+      constutoraId: ctx.usuario.constutoraId || null,
+      subestabelecidoId: ctx.usuario.subestabelecidoId || null,
+    }
   }),
 
   atualizar: protectedProcedure
@@ -238,6 +246,32 @@ export const permissoesPerfilRouter = router({
       } else {
         await ctx.db.insert(permissoesPerfil).values(input)
       }
+      return { ok: true }
+    }),
+
+  salvarLote: protectedProcedure
+    .input(z.object({
+      perfil: z.string(),
+      permissoes: z.array(z.object({
+        recurso: z.string(),
+        permitido: z.boolean(),
+      })),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.usuario.perfil !== 'Administrador') throw new Error('Sem permissão')
+
+      await ctx.db.delete(permissoesPerfil).where(eq(permissoesPerfil.perfil, input.perfil))
+
+      if (input.permissoes.length > 0) {
+        await ctx.db.insert(permissoesPerfil).values(
+          input.permissoes.map(p => ({
+            perfil: input.perfil,
+            recurso: p.recurso,
+            permitido: p.permitido,
+          }))
+        )
+      }
+
       return { ok: true }
     }),
 })

@@ -16,5 +16,10 @@
     "noUnusedParameters": false,
     "paths": { "@/*": ["./client/src/*"] }
   },
-  "include": ["client/src", "server", "drizzle"]
+  "include": ["client/src", "server", "drizzle"],
+  "exclude": [
+    "client/src/pages/Financeiro/**/*",
+    "client/src/pages/Relatorios/RelFinanceiro.tsx",
+    "server/routers/financeiro.ts"
+  ]
 }

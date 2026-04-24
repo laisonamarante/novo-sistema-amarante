@@ -17,8 +17,14 @@ export function usePermissoes() {
   }
 
   const perfil = data?.perfil || ''
-  const isExterno = ['Parceiro','Corretor','Imobiliária','Construtora'].includes(perfil)
+  const isExterno = ['Parceiro','Corretor','Imobiliária','Construtora','Subestabelecido'].includes(perfil)
   const isAdmin = perfil === 'Administrador'
 
-  return { pode, perfil, isExterno, isAdmin, isLoading }
+  const parceiroId = data?.parceiroId || null
+  const corretorId = data?.corretorId || null
+  const imobiliariaId = data?.imobiliariaId || null
+  const constutoraId = data?.constutoraId || null
+  const subestabelecidoId = data?.subestabelecidoId || null
+
+  return { pode, perfil, isExterno, isAdmin, isLoading, parceiroId, corretorId, imobiliariaId, constutoraId, subestabelecidoId }
 }

@@ -7,9 +7,10 @@ import { exportToCSV, hoje } from './exportCSV'
 
 export function RelProducao() {
   const [filtros, setFiltros] = useState<any>({})
+  const [ativos, setAtivos] = useState<any>({})
   const bancos   = trpc.cadastros.bancos.listar.useQuery()
   const agencias = trpc.cadastros.agencias.listar.useQuery({ bancoId: filtros.bancoId })
-  const { data, isLoading } = trpc.processos.listar.useQuery({ ...filtros, pagina: 1 })
+  const { data, isLoading } = trpc.processos.listar.useQuery({ ...ativos, pagina: 1 })
   function setF(k:string,v:any) { setFiltros((f:any)=>({...f,[k]:v})) }
 
   function handleExport() {
@@ -57,7 +58,7 @@ export function RelProducao() {
             options={(agencias.data||[]).map((a:any)=>({value:a.id,label:a.nome}))} />
         </div>
         <div className="mt-3">
-          <Button>Gerar</Button>
+          <Button onClick={() => setAtivos(filtros)}>Gerar</Button>
         </div>
       </Card>
       <Card>

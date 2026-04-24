@@ -3,7 +3,7 @@ import { trpc } from '../../lib/trpc'
 import { PageHeader, Button, Input, Select, Card, Table, Loading, Modal, Textarea, Badge } from '../../components/ui'
 import { Plus, Bell } from 'lucide-react'
 
-const PERFIS_AVISO = ['Todos','Administrador','Analista','Gerente','Corretor','Imobiliária','Parceiro','Construtora','Financeiro','Engenheiro','Atendente','Subestabelecido']
+const PERFIS_AVISO = ['Todos','Administrador','Analista','Gerente','Corretor','Imobiliária','Parceiro','Construtora','Subestabelecido']
 
 const fmtDate = (v: any): string => { if (!v) return ""; try { const d = new Date(v); if(isNaN(d.getTime())) return ""; return d.toISOString().substring(0,10); } catch { return ""; } }
 export function Avisos() {

@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import { trpc } from '../../lib/trpc'
+import { getStoredAuthToken } from '../../lib/auth-storage'
 import { PageHeader, Card, Button, Table, Loading } from '../../components/ui'
-import { Upload, FileText, Download, Trash2, File } from 'lucide-react'
+import { Upload, FileText, Download, Trash2, Eye } from 'lucide-react'
 
 function formatBytes(bytes: number) {
   if (!bytes) return '--'
@@ -13,10 +14,65 @@ function formatBytes(bytes: number) {
 export function MeusArquivos() {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [arquivoPreview, setArquivoPreview] = useState<{ nome: string; url: string } | null>(null)
+  const [previewOffset, setPreviewOffset] = useState({ x: 0, y: 0 })
   const inputRef = useRef<HTMLInputElement>(null)
+  const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
+  const previewDragRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 })
   const { data, isLoading, refetch } = trpc.cadastros.arquivos.listar.useQuery()
   const salvar = trpc.cadastros.arquivos.upload.useMutation({ onSuccess: () => refetch() })
   const excluir = trpc.cadastros.arquivos.excluir.useMutation({ onSuccess: () => refetch() })
+
+  function arquivoUrl(caminho?: string) {
+    const base = import.meta.env.BASE_URL || '/'
+    const token = getStoredAuthToken()
+    const cleanPath = caminho?.startsWith('/uploads/') ? caminho.slice(1) : (caminho || '').replace(/^\//, '')
+    return `${base}${cleanPath}?token=${encodeURIComponent(token)}`
+  }
+
+  function abrirArquivo(a: any) {
+    setPreviewOffset({ x: 0, y: 0 })
+    setArquivoPreview({
+      nome: a.nomeOriginal || a.nomeArquivo || 'Arquivo',
+      url: arquivoUrl(a.caminhoArquivo),
+    })
+  }
+
+  function moverPreview(event: PointerEvent) {
+    const start = previewDragRef.current
+    setPreviewOffset({
+      x: start.offsetX + event.clientX - start.x,
+      y: start.offsetY + event.clientY - start.y,
+    })
+  }
+
+  function pararPreview() {
+    window.removeEventListener('pointermove', moverPreview)
+  }
+
+  function iniciarPreview(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return
+    const target = event.target as HTMLElement
+    if (target.closest('button,a')) return
+    previewDragRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      offsetX: previewOffset.x,
+      offsetY: previewOffset.y,
+    }
+    window.addEventListener('pointermove', moverPreview)
+    window.addEventListener('pointerup', pararPreview, { once: true })
+  }
+
+  function imprimirPreview() {
+    previewFrameRef.current?.contentWindow?.focus()
+    previewFrameRef.current?.contentWindow?.print()
+  }
+
+  function abrirPreviewEmJanela() {
+    if (!arquivoPreview) return
+    window.open(arquivoPreview.url, '_blank', 'popup=yes,width=1200,height=900,noopener,noreferrer')
+  }
 
   async function doUpload(file: File) {
     setUploading(true)
@@ -98,8 +154,20 @@ export function MeusArquivos() {
                 <td className="px-4 py-3 text-xs text-gray-500">{a.criadoEm ? new Date(a.criadoEm).toLocaleDateString('pt-BR') : '--'}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <a href={`${import.meta.env.BASE_URL}${a.caminhoArquivo?.replace(/^\//, '')}`} target="_blank" rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800"><Download size={14}/></a>
+                    <button
+                      type="button"
+                      onClick={() => abrirArquivo(a)}
+                      className="text-blue-600 hover:text-blue-800"
+                      title="Visualizar">
+                      <Eye size={14}/>
+                    </button>
+                    <a
+                      href={arquivoUrl(a.caminhoArquivo)}
+                      download={a.nomeOriginal}
+                      className="text-blue-600 hover:text-blue-800"
+                      title="Baixar">
+                      <Download size={14}/>
+                    </a>
                     <button onClick={() => confirm('Excluir arquivo?') && excluir.mutate({ id: a.id })}
                       className="text-red-500 hover:text-red-700"><Trash2 size={14}/></button>
                   </div>
@@ -109,6 +177,60 @@ export function MeusArquivos() {
           </Table>
         )}
       </Card>
+
+      {arquivoPreview && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setArquivoPreview(null)} />
+          <div
+            className="fixed left-1/2 top-1/2 z-10 flex h-[92vh] w-[94vw] max-w-[1400px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl bg-white shadow-2xl"
+            style={{ transform: `translate(calc(-50% + ${previewOffset.x}px), calc(-50% + ${previewOffset.y}px))` }}
+          >
+            <div
+              className="flex cursor-move items-center justify-between gap-3 border-b px-5 py-3"
+              onPointerDown={iniciarPreview}
+            >
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-semibold text-gray-800">{arquivoPreview.nome}</h2>
+                <p className="text-xs text-gray-500">Arraste esta barra para mover a visualização.</p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={abrirPreviewEmJanela}
+                  className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Abrir em nova janela
+                </button>
+                <a
+                  href={arquivoPreview.url}
+                  download={arquivoPreview.nome}
+                  className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                  Baixar
+                </a>
+                <button
+                  type="button"
+                  onClick={imprimirPreview}
+                  className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Imprimir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setArquivoPreview(null)}
+                  className="flex h-9 w-9 items-center justify-center rounded border border-gray-300 text-xl leading-none text-gray-500 hover:bg-gray-50 hover:text-gray-800">
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 bg-gray-100 p-3">
+              <iframe
+                ref={previewFrameRef}
+                title={arquivoPreview.nome}
+                src={arquivoPreview.url}
+                className="h-full w-full rounded border border-gray-200 bg-white"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,19 +1,39 @@
+const fs = require('fs')
+const path = require('path')
+
+const cwd = '/home/laisonamarante/novo_amarante'
+
+function readEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return {}
+
+  return fs.readFileSync(filePath, 'utf8')
+    .split(/\r?\n/)
+    .reduce((env, line) => {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) return env
+
+      const eqIndex = trimmed.indexOf('=')
+      if (eqIndex === -1) return env
+
+      const key = trimmed.slice(0, eqIndex).trim()
+      const value = trimmed.slice(eqIndex + 1).trim().replace(/^['"]|['"]$/g, '')
+      env[key] = value
+      return env
+    }, {})
+}
+
+const envFile = readEnvFile(path.join(cwd, '.env'))
+
 module.exports = {
   apps: [{
     name: "novo-amarante",
-    script: "npx",
-    args: "tsx server/index.ts",
-    cwd: "/home/laisonamarante/novo_amarante",
+    script: "dist/server/index.js",
+    interpreter: "node",
+    cwd,
     env: {
+      ...envFile,
       NODE_ENV: "production",
-      DB_HOST: "localhost",
-      DB_PORT: "3306",
-      DB_NAME: "novo_sistema_amarante",
-      DB_USER: "amarante",
-      DB_PASS: "Amara2026db",
-      JWT_SECRET: "amarante2026_secret_key_prod",
-      PORT: "3050",
-      CLIENT_URL: "http://136.113.100.28"
+      PORT: envFile.PORT || "3050"
     }
   }]
 }

@@ -9,10 +9,6 @@ export { ClienteForm }     from './Cadastros/ClienteForm'
 export { Processos }       from './Financiamento/Processos'
 export { ProcessoForm }    from './Financiamento/ProcessoForm'
 export { PreAnalise }      from './Financiamento/PreAnalise'
-// Financeiro
-export { ContasPagar }     from './Financeiro/ContasPagar'
-export { ContasReceber }   from './Financeiro/ContasReceber'
-export { FluxoCaixa }      from './Financeiro/FluxoCaixa'
 // Segurança
 export { Usuarios }        from './Seguranca/Usuarios'
 export { Tarefas }         from './Seguranca/Tarefas'
@@ -23,7 +19,6 @@ export { MeusArquivos }    from './Arquivos/MeusArquivos'
 // Relatórios
 export { RelProcessos }    from './Relatorios/RelProcessos'
 export { RelProducao }     from './Relatorios/RelProducao'
-export { RelFinanceiro }   from './Relatorios/RelFinanceiro'
 // Outros
 export { BaterPonto }      from './BaterPonto'
 export { Configuracoes }   from './Configuracoes'

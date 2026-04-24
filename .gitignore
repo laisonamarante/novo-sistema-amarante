@@ -2,4 +2,8 @@ node_modules/
 dist/
 .vite/
 *.backup*
+*.bak
 .env
+backups/
+__tmp_upload__/
+uploads/

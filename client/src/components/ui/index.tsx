@@ -1,5 +1,6 @@
 import { forwardRef, ReactNode } from 'react'
 import { Loader2, AlertCircle } from 'lucide-react'
+import { formatCnpj, formatCpf, formatCpfCnpj, normalizarDocumentoPorMascara, type DocumentoMask } from '../../lib/documento'
 
 export function Btn({ variant='primary', size='md', loading, icon, children, className='', disabled, ...props }: {
   variant?:'primary'|'secondary'|'danger'|'ghost'|'success'; size?:'sm'|'md'|'lg'
@@ -17,15 +18,47 @@ export function Btn({ variant='primary', size='md', loading, icon, children, cla
   )
 }
 
-export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>&{label?:string;error?:string;hint?:string}>(
-  ({label,error,hint,className='',...props},ref) => (
-    <div className="flex flex-col gap-1">
-      {label&&<label className="text-sm font-medium text-gray-700">{label}</label>}
-      <input ref={ref} {...props} className={`border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${error?'border-red-400 bg-red-50':'border-gray-300'} ${props.disabled?'bg-gray-100':'bg-white'} ${className}`}/>
-      {error&&<span className="text-xs text-red-600 flex items-center gap-1"><AlertCircle size={11}/>{error}</span>}
-      {hint&&!error&&<span className="text-xs text-gray-400">{hint}</span>}
-    </div>
-  )
+export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>&{label?:string;error?:string;hint?:string;mask?:DocumentoMask}>(
+  ({label,error,hint,className='',mask,value,defaultValue,onChange,...props},ref) => {
+    const formatMaskedValue = (rawValue: unknown) => {
+      if (!mask) return rawValue
+      if (rawValue == null || rawValue === '') return rawValue
+      if (mask === 'cpf') return formatCpf(rawValue)
+      if (mask === 'cnpj') return formatCnpj(rawValue)
+      return formatCpfCnpj(rawValue)
+    }
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!mask) {
+        onChange?.(e)
+        return
+      }
+
+      const normalized = normalizarDocumentoPorMascara(e.target.value, mask)
+      const nextEvent = {
+        ...e,
+        target: { ...e.target, value: normalized },
+        currentTarget: { ...e.currentTarget, value: normalized },
+      } as React.ChangeEvent<HTMLInputElement>
+      onChange?.(nextEvent)
+    }
+
+    return (
+      <div className="flex flex-col gap-1">
+        {label&&<label className="text-sm font-medium text-gray-700">{label}</label>}
+        <input
+          ref={ref}
+          {...props}
+          value={formatMaskedValue(value) as string | number | readonly string[] | undefined}
+          defaultValue={formatMaskedValue(defaultValue) as string | number | readonly string[] | undefined}
+          onChange={handleChange}
+          className={`border rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${error?'border-red-400 bg-red-50':'border-gray-300'} ${props.disabled?'bg-gray-100':'bg-white'} ${className}`}
+        />
+        {error&&<span className="text-xs text-red-600 flex items-center gap-1"><AlertCircle size={11}/>{error}</span>}
+        {hint&&!error&&<span className="text-xs text-gray-400">{hint}</span>}
+      </div>
+    )
+  }
 )
 
 export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>&{label?:string;error?:string;options:{value:string|number;label:string}[];placeholder?:string}>(
@@ -87,9 +120,9 @@ export function Table({headers,children,loading,empty}:{headers:string[];childre
   )
 }
 
-export function Modal({title,open,onClose,children,size='md'}:{title:string;open:boolean;onClose:()=>void;children:ReactNode;size?:'sm'|'md'|'lg'|'xl'}) {
+export function Modal({title,open,onClose,children,size='md'}:{title:string;open:boolean;onClose:()=>void;children:ReactNode;size?:'sm'|'md'|'lg'|'xl'|'full'}) {
   if(!open)return null
-  const s={sm:'max-w-sm',md:'max-w-lg',lg:'max-w-2xl',xl:'max-w-4xl'}
+  const s={sm:'max-w-sm',md:'max-w-lg',lg:'max-w-2xl',xl:'max-w-4xl',full:'max-w-6xl'}
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose}/>
