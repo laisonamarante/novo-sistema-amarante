@@ -1072,7 +1072,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  adicionarVendedor: protectedProcedure
+  adicionarVendedor: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), clienteId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       await assertProcessoAcesso(ctx.db, ctx.usuario, input.processoId)
@@ -1109,7 +1109,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  adicionarImovel: protectedProcedure
+  adicionarImovel: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), imovelId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       await assertProcessoAcesso(ctx.db, ctx.usuario, input.processoId)
@@ -1154,7 +1154,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  adicionarAtendimento: protectedProcedure
+  adicionarAtendimento: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), descricao: z.string().min(1).max(2000) }))
     .mutation(async ({ input, ctx }) => {
       assertPerfilInterno(ctx.usuario)
@@ -1163,7 +1163,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  registrarVisualizacao: protectedProcedure
+  registrarVisualizacao: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       assertPerfilInterno(ctx.usuario)
@@ -1177,7 +1177,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  avancarEtapa: protectedProcedure
+  avancarEtapa: requirePerm('processo:editar')
     .input(z.object({
       processoId: z.number(),
       etapaId: z.number(),
@@ -1254,7 +1254,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  reabrirEtapa: protectedProcedure
+  reabrirEtapa: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), etapaId: z.number(), observacao: z.string().max(2000).optional() }))
     .mutation(async ({ input, ctx }) => {
       assertPerfilInterno(ctx.usuario)
@@ -1307,7 +1307,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  marcarEtapaPendente: protectedProcedure
+  marcarEtapaPendente: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), etapaId: z.number(), observacao: z.string().min(1).max(2000) }))
     .mutation(async ({ input, ctx }) => {
       assertPerfilInterno(ctx.usuario)
@@ -1341,7 +1341,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  adicionarDocumento: protectedProcedure
+  adicionarDocumento: requirePerm('processo:editar')
     .input(z.object({
       processoId: z.number(),
       nomeArquivo: z.string(),
@@ -1377,7 +1377,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  excluirDocumento: protectedProcedure
+  excluirDocumento: requirePerm('processo:editar')
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const [doc] = await ctx.db.select().from(processoDocumentos).where(eq(processoDocumentos.id, input.id))
@@ -1393,7 +1393,7 @@ export const processosRouter = router({
     }),
 
 
-  setProponente: protectedProcedure
+  setProponente: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), clienteId: z.number(), tipo: z.enum(['comprador','vendedor']), proponente: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       await assertProcessoAcesso(ctx.db, ctx.usuario, input.processoId)
@@ -1410,7 +1410,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  atualizarObsEtapa: protectedProcedure
+  atualizarObsEtapa: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), etapaId: z.number(), observacao: z.string() }))
     .mutation(async ({ input, ctx }) => {
       assertPerfilInterno(ctx.usuario)
@@ -1476,7 +1476,7 @@ export const processosRouter = router({
   }),
 
   // Analista pega processo pra si
-  pegarProcesso: protectedProcedure
+  pegarProcesso: requirePerm('processo:editar')
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       assertPerfilInterno(ctx.usuario)
@@ -1486,7 +1486,7 @@ export const processosRouter = router({
     }),
 
   // Atribuir responsável a um processo
-  atribuirResponsavel: protectedProcedure
+  atribuirResponsavel: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), responsavelId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       assertPerfilInterno(ctx.usuario)
@@ -1496,7 +1496,7 @@ export const processosRouter = router({
     }),
 
   // Registrar pendência (salva no processoHistorico com tipo='pendencia')
-  registrarPendencia: protectedProcedure
+  registrarPendencia: requirePerm('processo:editar')
     .input(z.object({ processoId: z.number(), descricao: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       await assertProcessoAcesso(ctx.db, ctx.usuario, input.processoId)
@@ -1529,7 +1529,7 @@ export const processosRouter = router({
         return result[0] as unknown as any[]
       }),
 
-    criar: protectedProcedure
+    criar: requirePerm('processo:editar')
       .input(z.object({
         processoId: z.number(),
         titulo: z.string().min(1),
@@ -1553,7 +1553,7 @@ export const processosRouter = router({
   }),
 
   // Aprovar documento
-  aprovarDocumento: protectedProcedure
+  aprovarDocumento: requirePerm('processo:editar')
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const perfil = (ctx as any).usuario?.perfil
@@ -1562,7 +1562,7 @@ export const processosRouter = router({
     }),
 
   // Reprovar documento
-  reprovarDocumento: protectedProcedure
+  reprovarDocumento: requirePerm('processo:editar')
     .input(z.object({ id: z.number(), motivo: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const perfil = (ctx as any).usuario?.perfil

@@ -908,12 +908,12 @@ export const pontoRouter = router({
 export const cadastrosRouter = router({
   bancos: router({
     listar:  protectedProcedure.query(({ ctx }) => ctx.db.select().from(bancos).where(eq(bancos.ativo, true))),
-    criar:   protectedProcedure.input(z.object({
+    criar:   requirePerm('cadastro:banco:criar').input(z.object({
       nome: z.string(),
       encaminhamento: z.enum(['CENOP','SICOB','CEHOP','INTERCERVICE','FUNCHAL','FINTECH','ITAÚ']).optional(),
       remuneracao: z.string().optional(),
     })).mutation(({ input, ctx }) => ctx.db.insert(bancos).values(input)),
-    editar:  protectedProcedure.input(z.object({
+    editar:  requirePerm('cadastro:banco:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       encaminhamento: z.enum(['CENOP','SICOB','CEHOP','INTERCERVICE','FUNCHAL','FINTECH','ITAÚ']).nullish(),
@@ -922,7 +922,7 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(bancos).set(dados).where(eq(bancos.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(bancos).set({ ativo: false }).where(eq(bancos.id, input.id))),
+    excluir: requirePerm('cadastro:banco:excluir').input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(bancos).set({ ativo: false }).where(eq(bancos.id, input.id))),
     listarPorParceiro: protectedProcedure.input(z.object({ parceiroId: z.number() })).query(async ({ input, ctx }) => {
       await assertScopedAccess(ctx.db, parceiros, parceiros.id, input.parceiroId, getParceirosScopeCondition(ctx.usuario), 'Acesso negado ao parceiro')
       const vinc = await ctx.db.select({ bancoId: parceiroBancos.bancoId }).from(parceiroBancos).where(eq(parceiroBancos.parceiroId, input.parceiroId))
@@ -977,8 +977,8 @@ export const cadastrosRouter = router({
 
   modalidades: router({
     listar: protectedProcedure.query(({ ctx }) => ctx.db.select().from(modalidades).where(eq(modalidades.ativo, true))),
-    criar:  protectedProcedure.input(z.object({ nome: z.string(), fluxoId: z.number().optional() })).mutation(({ input, ctx }) => ctx.db.insert(modalidades).values(input)),
-    editar: protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:modalidade:criar').input(z.object({ nome: z.string(), fluxoId: z.number().optional() })).mutation(({ input, ctx }) => ctx.db.insert(modalidades).values(input)),
+    editar: requirePerm('cadastro:modalidade:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       fluxoId: z.number().nullish(),
@@ -987,7 +987,7 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(modalidades).set(dados).where(eq(modalidades.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(modalidades).set({ ativo: false }).where(eq(modalidades.id, input.id))),
+    excluir: requirePerm('cadastro:modalidade:excluir').input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(modalidades).set({ ativo: false }).where(eq(modalidades.id, input.id))),
   }),
 
   fluxos: router({
@@ -998,8 +998,8 @@ export const cadastrosRouter = router({
         .from(fluxos)
         .where(isPerfilExterno(ctx.usuario?.perfil) ? and(condicaoBase, eq(fluxos.externo, true)) : condicaoBase)
     }),
-    criar:  protectedProcedure.input(z.object({ nome: z.string(), externo: z.boolean().optional() })).mutation(({ input, ctx }) => ctx.db.insert(fluxos).values(input)),
-    editar: protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:fluxo:criar').input(z.object({ nome: z.string(), externo: z.boolean().optional() })).mutation(({ input, ctx }) => ctx.db.insert(fluxos).values(input)),
+    editar: requirePerm('cadastro:fluxo:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       externo: z.boolean().optional(),
@@ -1007,22 +1007,22 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(fluxos).set(dados).where(eq(fluxos.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(fluxos).set({ ativo: false }).where(eq(fluxos.id, input.id))),
+    excluir: requirePerm('cadastro:fluxo:excluir').input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(fluxos).set({ ativo: false }).where(eq(fluxos.id, input.id))),
     listarEtapas: protectedProcedure.input(z.object({ fluxoId: z.number() })).query(async ({ input, ctx }) => {
       const todas = await ctx.db.select().from(etapas).where(eq(etapas.ativo, true)).orderBy(etapas.nome)
       const vincs = await ctx.db.select().from(fluxoEtapas).where(eq(fluxoEtapas.fluxoId, input.fluxoId)).orderBy(fluxoEtapas.ordem)
       const vincMap = new Map(vincs.map(v => [v.etapaId, v.ordem]))
       return todas.map(e => ({ ...e, vinculado: vincMap.has(e.id), fluxoOrdem: vincMap.get(e.id) ?? 0 }))
     }),
-    vincularEtapa: protectedProcedure.input(z.object({ etapaId: z.number(), fluxoId: z.number() })).mutation(async ({ input, ctx }) => {
+    vincularEtapa: requirePerm('cadastro:fluxo:editar').input(z.object({ etapaId: z.number(), fluxoId: z.number() })).mutation(async ({ input, ctx }) => {
       const vincs = await ctx.db.select().from(fluxoEtapas).where(eq(fluxoEtapas.fluxoId, input.fluxoId))
       const nextOrdem = vincs.length > 0 ? Math.max(...vincs.map(v => v.ordem)) + 1 : 1
       return ctx.db.insert(fluxoEtapas).values({ fluxoId: input.fluxoId, etapaId: input.etapaId, ordem: nextOrdem })
     }),
-    desvincularEtapa: protectedProcedure.input(z.object({ etapaId: z.number(), fluxoId: z.number() })).mutation(({ input, ctx }) =>
+    desvincularEtapa: requirePerm('cadastro:fluxo:editar').input(z.object({ etapaId: z.number(), fluxoId: z.number() })).mutation(({ input, ctx }) =>
       ctx.db.delete(fluxoEtapas).where(and(eq(fluxoEtapas.fluxoId, input.fluxoId), eq(fluxoEtapas.etapaId, input.etapaId)))
     ),
-    subirOrdemEtapa: protectedProcedure.input(z.object({ etapaId: z.number(), fluxoId: z.number() })).mutation(async ({ input, ctx }) => {
+    subirOrdemEtapa: requirePerm('cadastro:fluxo:editar').input(z.object({ etapaId: z.number(), fluxoId: z.number() })).mutation(async ({ input, ctx }) => {
       const lista = await ctx.db.select().from(fluxoEtapas).where(eq(fluxoEtapas.fluxoId, input.fluxoId)).orderBy(fluxoEtapas.ordem)
       const idx = lista.findIndex(d => d.etapaId === input.etapaId)
       if (idx <= 0) return
@@ -1030,7 +1030,7 @@ export const cadastrosRouter = router({
       await ctx.db.update(fluxoEtapas).set({ ordem: prev.ordem }).where(eq(fluxoEtapas.id, curr.id))
       await ctx.db.update(fluxoEtapas).set({ ordem: curr.ordem }).where(eq(fluxoEtapas.id, prev.id))
     }),
-    descerOrdemEtapa: protectedProcedure.input(z.object({ etapaId: z.number(), fluxoId: z.number() })).mutation(async ({ input, ctx }) => {
+    descerOrdemEtapa: requirePerm('cadastro:fluxo:editar').input(z.object({ etapaId: z.number(), fluxoId: z.number() })).mutation(async ({ input, ctx }) => {
       const lista = await ctx.db.select().from(fluxoEtapas).where(eq(fluxoEtapas.fluxoId, input.fluxoId)).orderBy(fluxoEtapas.ordem)
       const idx = lista.findIndex(d => d.etapaId === input.etapaId)
       if (idx < 0 || idx >= lista.length-1) return
@@ -1048,7 +1048,7 @@ export const cadastrosRouter = router({
       }).from(fluxoDocumentos).leftJoin(documentosTipos, eq(fluxoDocumentos.documentoTipoId, documentosTipos.id)).where(and(eq(fluxoDocumentos.fluxoId, input.fluxoId), eq(fluxoDocumentos.categoria, input.categoria))).orderBy(fluxoDocumentos.ordem)
       return rows
     }),
-    adicionarDocChecklist: protectedProcedure.input(z.object({
+    adicionarDocChecklist: requirePerm('cadastro:fluxo:editar').input(z.object({
       fluxoId: z.number(),
       documentoTipoId: z.number(),
       categoria: z.string(),
@@ -1057,13 +1057,13 @@ export const cadastrosRouter = router({
     })).mutation(({ input, ctx }) =>
       ctx.db.insert(fluxoDocumentos).values(input)
     ),
-    definirObrigatorioPrimeiraEtapaDoc: protectedProcedure.input(z.object({ id: z.number(), obrigatorioPrimeiraEtapa: z.boolean() })).mutation(({ input, ctx }) =>
+    definirObrigatorioPrimeiraEtapaDoc: requirePerm('cadastro:fluxo:editar').input(z.object({ id: z.number(), obrigatorioPrimeiraEtapa: z.boolean() })).mutation(({ input, ctx }) =>
       ctx.db.update(fluxoDocumentos).set({ obrigatorioPrimeiraEtapa: input.obrigatorioPrimeiraEtapa }).where(eq(fluxoDocumentos.id, input.id))
     ),
-    removerDocChecklist: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) =>
+    removerDocChecklist: requirePerm('cadastro:fluxo:editar').input(z.object({ id: z.number() })).mutation(({ input, ctx }) =>
       ctx.db.delete(fluxoDocumentos).where(eq(fluxoDocumentos.id, input.id))
     ),
-    subirOrdemDoc: protectedProcedure.input(z.object({ id: z.number(), fluxoId: z.number(), categoria: z.string() })).mutation(async ({ input, ctx }) => {
+    subirOrdemDoc: requirePerm('cadastro:fluxo:editar').input(z.object({ id: z.number(), fluxoId: z.number(), categoria: z.string() })).mutation(async ({ input, ctx }) => {
       const lista = await ctx.db.select().from(fluxoDocumentos).where(and(eq(fluxoDocumentos.fluxoId, input.fluxoId), eq(fluxoDocumentos.categoria, input.categoria))).orderBy(fluxoDocumentos.ordem)
       const idx = lista.findIndex(d => d.id === input.id)
       if (idx <= 0) return
@@ -1071,7 +1071,7 @@ export const cadastrosRouter = router({
       await ctx.db.update(fluxoDocumentos).set({ ordem: prev.ordem }).where(eq(fluxoDocumentos.id, curr.id))
       await ctx.db.update(fluxoDocumentos).set({ ordem: curr.ordem }).where(eq(fluxoDocumentos.id, prev.id))
     }),
-    descerOrdemDoc: protectedProcedure.input(z.object({ id: z.number(), fluxoId: z.number(), categoria: z.string() })).mutation(async ({ input, ctx }) => {
+    descerOrdemDoc: requirePerm('cadastro:fluxo:editar').input(z.object({ id: z.number(), fluxoId: z.number(), categoria: z.string() })).mutation(async ({ input, ctx }) => {
       const lista = await ctx.db.select().from(fluxoDocumentos).where(and(eq(fluxoDocumentos.fluxoId, input.fluxoId), eq(fluxoDocumentos.categoria, input.categoria))).orderBy(fluxoDocumentos.ordem)
       const idx = lista.findIndex(d => d.id === input.id)
       if (idx < 0 || idx >= lista.length-1) return
@@ -1083,8 +1083,8 @@ export const cadastrosRouter = router({
 
   situacoes: router({
     listar: protectedProcedure.query(({ ctx }) => ctx.db.select().from(situacoes).where(eq(situacoes.ativo, true))),
-    criar:  protectedProcedure.input(z.object({ nome: z.string(), ordem: z.number().optional() })).mutation(({ input, ctx }) => ctx.db.insert(situacoes).values(input)),
-    editar: protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:situacao:criar').input(z.object({ nome: z.string(), ordem: z.number().optional() })).mutation(({ input, ctx }) => ctx.db.insert(situacoes).values(input)),
+    editar: requirePerm('cadastro:situacao:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       ordem: z.number().optional(),
@@ -1092,13 +1092,13 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(situacoes).set(dados).where(eq(situacoes.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(situacoes).set({ ativo: false }).where(eq(situacoes.id, input.id))),
+    excluir: requirePerm('cadastro:situacao:excluir').input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(situacoes).set({ ativo: false }).where(eq(situacoes.id, input.id))),
   }),
 
   etapas: router({
     listar: protectedProcedure.input(z.object({}).optional()).query(({ ctx }) =>
       ctx.db.select().from(etapas).where(eq(etapas.ativo, true))),
-    criar:  protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:etapa:criar').input(z.object({
       nome: z.string(),
       ordem: z.number().optional(),
       tolerancia: z.number().optional(),
@@ -1107,7 +1107,7 @@ export const cadastrosRouter = router({
       atendente: z.boolean().optional(),
       externo: z.boolean().optional(),
     })).mutation(({ input, ctx }) => ctx.db.insert(etapas).values(input)),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('cadastro:etapa:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       ordem: z.number().optional(),
@@ -1120,7 +1120,7 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(etapas).set(dados).where(eq(etapas.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(etapas).set({ ativo: false }).where(eq(etapas.id, input.id))),
+    excluir: requirePerm('cadastro:etapa:excluir').input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(etapas).set({ ativo: false }).where(eq(etapas.id, input.id))),
   }),
 
   construtoras: router({
@@ -1583,7 +1583,7 @@ export const cadastrosRouter = router({
         construtoraId: usuario.perfil === 'Construtora' ? construtoraPorUsuario.get(usuario.id) || null : null,
       }))
     }),
-    criar:   protectedProcedure.input(z.object({
+    criar:   requirePerm('usuario:criar').input(z.object({
       nome: z.string(), login: z.string(), senha: z.string(), email: z.string().optional(),
       cpf: z.string().optional(), pis: z.string().optional(),
       perfil: z.enum(['Administrador','Analista','Gerente','Corretor','Imobiliária','Parceiro','Construtora','Subestabelecido']),
@@ -1604,7 +1604,7 @@ export const cadastrosRouter = router({
         })
         return { ok: true }
       }),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('usuario:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(), login: z.string().optional(), email: z.string().optional(),
       cpf: z.string().optional(), pis: z.string().optional(),
@@ -1778,9 +1778,9 @@ export const cadastrosRouter = router({
 
   documentosTipos: router({
     listar:  protectedProcedure.query(({ ctx }) => ctx.db.select().from(documentosTipos).where(eq(documentosTipos.ativo, true))),
-    criar:   protectedProcedure.input(z.object({ fluxoId: z.number().optional(), nome: z.string(), categoria: z.string().optional(), ordem: z.number().optional(), obrigatorio: z.boolean().optional() }))
+    criar:   requirePerm('cadastro:documento:criar').input(z.object({ fluxoId: z.number().optional(), nome: z.string(), categoria: z.string().optional(), ordem: z.number().optional(), obrigatorio: z.boolean().optional() }))
       .mutation(({ input, ctx }) => ctx.db.insert(documentosTipos).values(input as any)),
-    editar:  protectedProcedure.input(z.object({
+    editar:  requirePerm('cadastro:documento:editar').input(z.object({
       id: z.number(),
       fluxoId: z.number().nullish(),
       nome: z.string().optional(),
@@ -1791,7 +1791,7 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(documentosTipos).set(dados as any).where(eq(documentosTipos.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(documentosTipos).set({ ativo: false }).where(eq(documentosTipos.id, input.id))),
+    excluir: requirePerm('cadastro:documento:excluir').input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(documentosTipos).set({ ativo: false }).where(eq(documentosTipos.id, input.id))),
   }),
 
   // Empreendimentos
