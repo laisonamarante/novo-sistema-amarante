@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
+import { usePermissoes } from '../../lib/permissoes'
 import { PageHeader, Button, Input, Select, Card, Table, Loading, Modal, Alert, Badge } from '../../components/ui'
 import { Plus, Pencil, Key, Shield } from 'lucide-react'
 
@@ -37,6 +38,8 @@ export function Usuarios() {
   const [filtroNome, setFiltroNome]     = useState('')
   const [filtroPerfil, setFiltroPerfil] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
+  const { pode, isAdmin } = usePermissoes()
+  const podeGerenciarUsuarios = isAdmin || pode('menu:usuarios')
 
   const { data, isLoading, refetch } = trpc.cadastros.usuarios.listar.useQuery()
   const subestabelecidosList = trpc.cadastros.subestabelecidos.listar.useQuery()
@@ -168,13 +171,17 @@ export function Usuarios() {
       <PageHeader title="Usuários"
         actions={
           <div className="flex gap-2">
-            <Link
-              to="/seguranca/permissoes"
-              className="inline-flex items-center gap-2 rounded font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm"
-            >
-              <Shield size={14}/> Permissões
-            </Link>
-            <Button onClick={openCreate}><Plus size={14}/> Novo Usuário</Button>
+            {isAdmin && (
+              <Link
+                to="/seguranca/permissoes"
+                className="inline-flex items-center gap-2 rounded font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm"
+              >
+                <Shield size={14}/> Permissões
+              </Link>
+            )}
+            {podeGerenciarUsuarios && (
+              <Button onClick={openCreate}><Plus size={14}/> Novo Usuário</Button>
+            )}
           </div>
         } />
 
@@ -199,9 +206,15 @@ export function Usuarios() {
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="px-3 py-3">
                   <div className="flex gap-2">
-                    <button onClick={() => openEdit(u)} className="text-blue-600 hover:text-blue-800" title="Editar"><Pencil size={14}/></button>
-                    <button onClick={()=>setModalSenha(u.id)} className="text-orange-500 hover:text-orange-700" title="Alterar Senha"><Key size={14}/></button>
-                    <Link to="/seguranca/permissoes" className="text-blue-500 hover:text-blue-700" title="Permissões do Perfil"><Shield size={14}/></Link>
+                    {podeGerenciarUsuarios && (
+                      <button onClick={() => openEdit(u)} className="text-blue-600 hover:text-blue-800" title="Editar"><Pencil size={14}/></button>
+                    )}
+                    {podeGerenciarUsuarios && (
+                      <button onClick={()=>setModalSenha(u.id)} className="text-orange-500 hover:text-orange-700" title="Alterar Senha"><Key size={14}/></button>
+                    )}
+                    {isAdmin && (
+                      <Link to="/seguranca/permissoes" className="text-blue-500 hover:text-blue-700" title="Permissões do Perfil"><Shield size={14}/></Link>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3 font-medium text-gray-800">{u.nome}</td>
@@ -285,7 +298,7 @@ export function Usuarios() {
           )}
         </div>
         <div className="flex gap-3 pt-4">
-          <Button className="flex-1 justify-center" onClick={handleSave} loading={criar.isPending || editar.isPending}>
+          <Button className="flex-1 justify-center" onClick={handleSave} loading={criar.isPending || editar.isPending} disabled={!podeGerenciarUsuarios}>
             {editId ? 'Salvar Alterações' : 'Criar'}
           </Button>
           <Button variant="secondary" className="flex-1 justify-center" onClick={()=>{setModal(false);setEditId(null)}}>Cancelar</Button>
@@ -301,7 +314,7 @@ export function Usuarios() {
           <div className="flex gap-3 pt-2">
             <Button className="flex-1 justify-center"
               onClick={() => { if (modalSenha && novaSenha === confirmSenha && novaSenha) resetarSenha.mutate({ usuarioId: modalSenha, novaSenha }) }}
-              loading={resetarSenha.isPending} disabled={!novaSenha || novaSenha !== confirmSenha}>Salvar</Button>
+              loading={resetarSenha.isPending} disabled={!novaSenha || novaSenha !== confirmSenha || !podeGerenciarUsuarios}>Salvar</Button>
             <Button variant="secondary" className="flex-1 justify-center" onClick={()=>{setModalSenha(null);setNovaSenha('');setConfirmSenha('')}}>Cancelar</Button>
           </div>
         </div>

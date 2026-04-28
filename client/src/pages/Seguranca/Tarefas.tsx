@@ -2,6 +2,7 @@ import { fmtDateBR } from "../../lib/dateUtils"
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
+import { usePermissoes } from '../../lib/permissoes'
 import { PageHeader, Button, Select, Input, Card, Table, Loading, Modal, Textarea, Badge } from '../../components/ui'
 import { Plus, CheckCircle, Pencil } from 'lucide-react'
 
@@ -23,6 +24,7 @@ export function Tarefas() {
   const [selecionados, setSelecionados] = useState<number[]>([])
   const [modalMassa, setModalMassa] = useState(false)
   const [massaForm, setMassaForm] = useState<any>({})
+  const { pode } = usePermissoes()
 
   const { data, isLoading, refetch } = trpc.tarefas.minhasTarefas.useQuery()
   const usuariosList = trpc.cadastros.usuarios.listar.useQuery()
@@ -91,12 +93,14 @@ export function Tarefas() {
       <PageHeader title="Tarefas"
         actions={
           <div className="flex gap-2">
-            {selecionados.length > 0 && (
+            {selecionados.length > 0 && pode('tarefa:resolver') && (
               <Button variant="secondary" onClick={() => setModalMassa(true)}>
                 Ações em massa ({selecionados.length})
               </Button>
             )}
-            <Button onClick={() => setModal(true)}><Plus size={14}/> Nova Tarefa</Button>
+            {pode('tarefa:criar') && (
+              <Button onClick={() => setModal(true)}><Plus size={14}/> Nova Tarefa</Button>
+            )}
           </div>
         } />
 
@@ -191,7 +195,7 @@ export function Tarefas() {
           <Textarea label="Solicitação *" value={form.solicitacao||''} onChange={e=>set('solicitacao',e.target.value)} rows={3} />
           <Input label="Data Limite" type="date" value={form.dataLimite||''} onChange={e=>set('dataLimite',e.target.value)} />
           <div className="flex gap-3 pt-2">
-            <Button className="flex-1 justify-center" onClick={()=>criar.mutate(form)} loading={criar.isPending}>Salvar</Button>
+            <Button className="flex-1 justify-center" onClick={()=>criar.mutate(form)} loading={criar.isPending} disabled={!pode('tarefa:criar')}>Salvar</Button>
             <Button variant="secondary" className="flex-1 justify-center" onClick={()=>setModal(false)}>Cancelar</Button>
           </div>
         </div>
@@ -205,7 +209,7 @@ export function Tarefas() {
           <Textarea label="Acompanhamento" value={editForm.acompanhamento||''} onChange={e=>setE('acompanhamento',e.target.value)} rows={4}
             placeholder="Descreva o acompanhamento ou resolucao da tarefa..." />
           <div className="flex gap-3 pt-2">
-            <Button className="flex-1 justify-center" onClick={salvarEdicao} loading={concluir.isPending}>Salvar</Button>
+            <Button className="flex-1 justify-center" onClick={salvarEdicao} loading={concluir.isPending} disabled={!pode('tarefa:resolver')}>Salvar</Button>
             <Button variant="secondary" className="flex-1 justify-center" onClick={()=>setEditModal(false)}>Cancelar</Button>
           </div>
         </div>
@@ -222,7 +226,7 @@ export function Tarefas() {
           <div className="flex gap-3 pt-2">
             <Button className="flex-1 justify-center" onClick={executarAcaoMassa}
               loading={concluirEmMassa.isPending}
-              disabled={!massaForm.status && !massaForm.executanteId}>
+              disabled={(!massaForm.status && !massaForm.executanteId) || !pode('tarefa:resolver')}>
               Aplicar
             </Button>
             <Button variant="secondary" className="flex-1 justify-center" onClick={()=>setModalMassa(false)}>Cancelar</Button>

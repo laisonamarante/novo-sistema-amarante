@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
+import { usePermissoes } from '../../lib/permissoes'
 import { PageHeader, Button, Input, Select, Card, Table, Loading, Modal, Textarea, Badge } from '../../components/ui'
 import { Plus, Printer } from 'lucide-react'
 
@@ -20,6 +21,7 @@ export function Advertencias() {
   const [filtroUser, setFiltroUser] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
   const [processoSearch, setProcessoSearch] = useState('')
+  const { pode } = usePermissoes()
 
   const { data, isLoading, refetch } = trpc.advertencias.listar.useQuery({
     usuarioId: filtroUser ? Number(filtroUser) : undefined,
@@ -48,7 +50,7 @@ export function Advertencias() {
   return (
     <div>
       <PageHeader title="Cadastro de Advertência"
-        actions={<Button onClick={() => setModal(true)}><Plus size={14}/> Nova Advertência</Button>} />
+        actions={pode('menu:advertencias') ? <Button onClick={() => setModal(true)}><Plus size={14}/> Nova Advertência</Button> : undefined} />
 
       {/* Filtros */}
       <Card className="p-4 mb-4">
@@ -75,7 +77,8 @@ export function Advertencias() {
                   <select
                     value={a.status || 'Pendente'}
                     onChange={e => handleStatusChange(a.id, e.target.value)}
-                    className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${STATUS_COLORS[a.status] || STATUS_COLORS.Pendente}`}
+                    disabled={!pode('menu:advertencias')}
+                    className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${STATUS_COLORS[a.status] || STATUS_COLORS.Pendente}`}
                   >
                     {STATUS_OPTIONS.map(s => (
                       <option key={s} value={s}>{s}</option>
@@ -110,7 +113,7 @@ export function Advertencias() {
           </div>
           <Textarea label="Descrição *" value={form.descricao||''} onChange={e=>set('descricao',e.target.value)} rows={4} />
           <div className="flex gap-3 pt-2">
-            <Button className="flex-1 justify-center" onClick={()=>criar.mutate(form)} loading={criar.isPending}>Salvar</Button>
+            <Button className="flex-1 justify-center" onClick={()=>criar.mutate(form)} loading={criar.isPending} disabled={!pode('menu:advertencias')}>Salvar</Button>
             <Button variant="secondary" className="flex-1 justify-center" onClick={()=>setModal(false)}>Cancelar</Button>
           </div>
         </div>

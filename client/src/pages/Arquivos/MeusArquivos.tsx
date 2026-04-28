@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { trpc } from '../../lib/trpc'
+import { usePermissoes } from '../../lib/permissoes'
 import { getStoredAuthToken } from '../../lib/auth-storage'
 import { PageHeader, Card, Button, Table, Loading } from '../../components/ui'
 import { Upload, FileText, Download, Trash2, Eye } from 'lucide-react'
@@ -19,6 +20,7 @@ export function MeusArquivos() {
   const inputRef = useRef<HTMLInputElement>(null)
   const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
   const previewDragRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 })
+  const { pode } = usePermissoes()
   const { data, isLoading, refetch } = trpc.cadastros.arquivos.listar.useQuery()
   const salvar = trpc.cadastros.arquivos.upload.useMutation({ onSuccess: () => refetch() })
   const excluir = trpc.cadastros.arquivos.excluir.useMutation({ onSuccess: () => refetch() })
@@ -122,23 +124,27 @@ export function MeusArquivos() {
     <div>
       <PageHeader title="Meus Arquivos"
         actions={
-          <label className="cursor-pointer">
-            <input ref={inputRef} type="file" className="hidden" multiple onChange={handleUpload} />
-            <Button loading={uploading} onClick={() => inputRef.current?.click()}><Upload size={14}/> Upload</Button>
-          </label>
+          pode('menu:arquivos') ? (
+            <label className="cursor-pointer">
+              <input ref={inputRef} type="file" className="hidden" multiple onChange={handleUpload} />
+              <Button loading={uploading} onClick={() => inputRef.current?.click()}><Upload size={14}/> Upload</Button>
+            </label>
+          ) : undefined
         } />
 
       {/* Drop zone */}
-      <div
-        className={`border-2 border-dashed rounded-lg p-8 mb-4 text-center transition-colors cursor-pointer ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-gray-50'}`}
-        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-      >
-        <Upload size={32} className="mx-auto text-gray-400 mb-2"/>
-        <p className="text-sm text-gray-500">Arraste arquivos aqui ou clique para fazer upload</p>
-      </div>
+      {pode('menu:arquivos') && (
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 mb-4 text-center transition-colors cursor-pointer ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-gray-50'}`}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+        >
+          <Upload size={32} className="mx-auto text-gray-400 mb-2"/>
+          <p className="text-sm text-gray-500">Arraste arquivos aqui ou clique para fazer upload</p>
+        </div>
+      )}
 
       <Card>
         {isLoading ? <Loading/> : (
@@ -168,8 +174,10 @@ export function MeusArquivos() {
                       title="Baixar">
                       <Download size={14}/>
                     </a>
-                    <button onClick={() => confirm('Excluir arquivo?') && excluir.mutate({ id: a.id })}
-                      className="text-red-500 hover:text-red-700"><Trash2 size={14}/></button>
+                    {pode('menu:arquivos') && (
+                      <button onClick={() => confirm('Excluir arquivo?') && excluir.mutate({ id: a.id })}
+                        className="text-red-500 hover:text-red-700"><Trash2 size={14}/></button>
+                    )}
                   </div>
                 </td>
               </tr>

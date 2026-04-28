@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { trpc } from '../../lib/trpc'
+import { usePermissoes } from '../../lib/permissoes'
 import { PageHeader, Button, Input, Select, Card, Table, Loading, Modal, Textarea, Badge } from '../../components/ui'
 import { Plus, Bell } from 'lucide-react'
 
@@ -11,6 +12,7 @@ export function Avisos() {
   const [editId, setEditId] = useState<number|null>(null)
   const [form, setForm]   = useState<any>({ perfil: 'Todos' })
   const [filtroAtivo, setFiltroAtivo] = useState(false)
+  const { pode } = usePermissoes()
   const { data, isLoading, refetch } = trpc.avisos.listar.useQuery()
   const criar = trpc.avisos.criar.useMutation({ onSuccess: () => { setModal(false); refetch(); setForm({ perfil: 'Todos' }); setEditId(null) } })
   const editar = trpc.avisos.editar.useMutation({ onSuccess: () => { setModal(false); refetch(); setForm({ perfil: 'Todos' }); setEditId(null) } })
@@ -76,8 +78,12 @@ export function Avisos() {
                 <tr key={a.id} className="hover:bg-gray-50">
                   <td className="px-3 py-3">
                     <div className="flex gap-2">
-                      <button onClick={() => { setForm({ titulo: a.titulo, mensagem: a.mensagem, perfil: a.perfil || 'Todos', dataInicio: fmtDate(inicio), dataFim: fmtDate(fim) }); setEditId(a.id); setModal(true) }} className="text-blue-600 hover:text-blue-800 text-xs" title="Editar">✎</button>
-                      <button onClick={() => { if(confirm("Excluir este aviso?")) excluir.mutate({ id: a.id }) }} className="text-red-500 hover:text-red-700 text-xs" title="Excluir">🗑</button>
+                      {pode('menu:avisos') && (
+                        <button onClick={() => { setForm({ titulo: a.titulo, mensagem: a.mensagem, perfil: a.perfil || 'Todos', dataInicio: fmtDate(inicio), dataFim: fmtDate(fim) }); setEditId(a.id); setModal(true) }} className="text-blue-600 hover:text-blue-800 text-xs" title="Editar">✎</button>
+                      )}
+                      {pode('menu:avisos') && (
+                        <button onClick={() => { if(confirm("Excluir este aviso?")) excluir.mutate({ id: a.id }) }} className="text-red-500 hover:text-red-700 text-xs" title="Excluir">🗑</button>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm">{inicio ? new Date(inicio).toLocaleDateString('pt-BR') : '--'}</td>
@@ -90,9 +96,11 @@ export function Avisos() {
         )}
       </Card>
 
-      <div className="mt-4">
-        <Button onClick={() => { setForm({ perfil: 'Todos' }); setEditId(null); setModal(true) }}>Novo</Button>
-      </div>
+      {pode('menu:avisos') && (
+        <div className="mt-4">
+          <Button onClick={() => { setForm({ perfil: 'Todos' }); setEditId(null); setModal(true) }}>Novo</Button>
+        </div>
+      )}
 
       <Modal open={modal} title={editId ? "Editar Aviso" : "Novo Aviso"} onClose={() => setModal(false)}>
         <div className="space-y-3">
@@ -105,7 +113,7 @@ export function Avisos() {
             <Input label="Data Fim" type="date" value={form.dataFim||''} onChange={e=>set('dataFim',e.target.value)} />
           </div>
           <div className="flex gap-3 pt-2">
-            <Button className="flex-1 justify-center" onClick={()=>{ if(editId) editar.mutate({id:editId,...form}); else criar.mutate(form) }} loading={criar.isPending||editar.isPending}>{editId ? 'Atualizar' : 'Salvar'}</Button>
+            <Button className="flex-1 justify-center" onClick={()=>{ if(editId) editar.mutate({id:editId,...form}); else criar.mutate(form) }} loading={criar.isPending||editar.isPending} disabled={!pode('menu:avisos')}>{editId ? 'Atualizar' : 'Salvar'}</Button>
             <Button variant="secondary" className="flex-1 justify-center" onClick={()=>setModal(false)}>Cancelar</Button>
           </div>
         </div>

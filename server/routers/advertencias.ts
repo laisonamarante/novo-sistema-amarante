@@ -3,24 +3,9 @@ import { eq, and, desc, sql } from 'drizzle-orm'
 import { router, protectedProcedure } from '../trpc'
 import { advertencias, avisos, usuarios, permissoes } from '../../drizzle/schema'
 
-// Equipe interna real mapeada do sistema
-export const EQUIPE_INTERNA = [
-  { login: 'laison',     nome: 'Laison Amarante' },
-  { login: 'mayara',     nome: 'Mayara Jorge' },
-  { login: 'ana.paula',  nome: 'Ana Paula Reis' },
-  { login: 'cecilia',    nome: 'Cecilia Marques' },
-  { login: 'lucas1',     nome: 'Lucas Souza' },
-  { login: 'Estefany',   nome: 'Esthefany Silva' },
-  { login: 'dayara',     nome: 'Dayara Amarante' },
-  { login: 'Jessica',    nome: 'Jessica Porfirio' },
-  { login: 'Ana.Clara',  nome: 'Ana Clara' },
-  { login: 'beatriz',    nome: 'Beatriz Souza' },
-  { login: 'gabriela',   nome: 'Gabriela Marin' },
-  { login: 'Mikelly',    nome: 'Mikelly Souza' },
-  { login: 'Yasmin',     nome: 'Yasmim' },
-  { login: 'joaorafael', nome: 'João Rafael' },
-  { login: 'Julia.01',   nome: 'Júlia' },
-]
+// Para listar a equipe interna em queries, usar:
+//   SELECT id, nome, login FROM usuarios WHERE perfil IN ('Administrador','Analista','Gerente') AND ativo = 1
+// (a antiga constante EQUIPE_INTERNA hardcoded foi removida em 2026-04-28 — era dead code)
 
 export const PERFIS_USUARIO = [
   'Administrador', 'Analista', 'Gerente',
