@@ -12,7 +12,7 @@ import {
   User
 } from 'lucide-react'
 
-function filtrarMenu(items: SidebarMenuItem[], pode: (perm: string) => boolean): SidebarMenuItem[] {
+function filtrarMenu(items: SidebarMenuItem[], pode: (perm: string) => boolean, isAdmin: boolean): SidebarMenuItem[] {
   const filtrados: SidebarMenuItem[] = []
 
   for (const item of items) {
@@ -21,11 +21,12 @@ function filtrarMenu(items: SidebarMenuItem[], pode: (perm: string) => boolean):
       continue
     }
 
+    if (item.adminOnly && !isAdmin) continue
     if (item.perm && !pode(item.perm)) continue
     if (item.perms && !item.perms.some(perm => pode(perm))) continue
 
     if (item.children) {
-      const filhos = filtrarMenu(item.children, pode)
+      const filhos = filtrarMenu(item.children, pode, isAdmin)
       if (!filhos.length) continue
       filtrados.push({ ...item, children: filhos })
       continue
@@ -141,13 +142,13 @@ function MenuItem({
 
 export function Layout() {
   const { usuario, logout } = useAuth()
-  const { pode, isExterno } = usePermissoes()
+  const { pode, isExterno, isAdmin } = usePermissoes()
   const navigate = useNavigate()
   const [sidebar, setSidebar] = useState(true)
   const [dropUser, setDropUser] = useState(false)
   const [openMenus, setOpenMenus] = useState<OpenMenus>({})
 
-  const menuVisivel = filtrarMenu(menu, pode)
+  const menuVisivel = filtrarMenu(menu, pode, isAdmin)
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">

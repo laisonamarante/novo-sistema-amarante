@@ -17,6 +17,7 @@ import { Tarefas }        from './pages/Seguranca/Tarefas'
 import { Advertencias }   from './pages/Seguranca/Advertencias'
 import { Avisos }         from './pages/Seguranca/Avisos'
 import { Permissoes }     from './pages/Seguranca/Permissoes'
+import { Auditoria }      from './pages/Seguranca/Auditoria'
 import { MeusArquivos }   from './pages/Arquivos/MeusArquivos'
 import { RelProcessos }   from './pages/Relatorios/RelProcessos'
 import { RelProducao }    from './pages/Relatorios/RelProducao'
@@ -84,6 +85,13 @@ function RequireInterno({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const { isAdmin, isLoading } = usePermissoes()
+  if (isLoading) return null
+  if (!isAdmin) return <Navigate to='/' replace />
+  return <>{children}</>
+}
+
 const CONFIGURACOES_ROUTE_PERMS = [
   'menu:configuracoes',
   'cadastro:construtora',
@@ -129,6 +137,7 @@ export default function App() {
                 <Route path='seguranca/advertencias'       element={<RequirePerm perm='menu:advertencias'><Advertencias /></RequirePerm>} />
                 <Route path='seguranca/avisos'             element={<RequirePerm perm='menu:avisos'><Avisos /></RequirePerm>} />
                 <Route path='seguranca/permissoes'         element={<RequirePerm perm='menu:configuracoes'><Permissoes /></RequirePerm>} />
+                <Route path='seguranca/auditoria'          element={<RequireAdmin><Auditoria /></RequireAdmin>} />
                 {/* Arquivos - protegido */}
                 <Route path='arquivos'                     element={<RequirePerm perm='menu:arquivos'><MeusArquivos /></RequirePerm>} />
                 {/* Relatorios - protegido */}

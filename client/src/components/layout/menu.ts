@@ -21,6 +21,7 @@ export interface MenuItem {
   section?: string
   perm?: string
   perms?: string[]
+  adminOnly?: boolean
 }
 
 export const menu: MenuItem[] = [
@@ -90,6 +91,7 @@ export const menu: MenuItem[] = [
       { label: 'Permissões', path: '/seguranca/permissoes', perm: 'menu:configuracoes' },
       { label: 'Advertência', path: '/seguranca/advertencias', perm: 'menu:advertencias' },
       { label: 'Aviso', path: '/seguranca/avisos', perm: 'menu:avisos' },
+      { label: 'Auditoria', path: '/seguranca/auditoria', adminOnly: true },
     ],
   },
   {

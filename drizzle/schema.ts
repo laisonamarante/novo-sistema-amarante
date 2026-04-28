@@ -717,3 +717,18 @@ export const subestabelecidoBancos = mysqlTable('subestabelecido_bancos', {
   subestabelecidoId: int('subestabelecido_id').notNull().references(() => subestabelecidos.id),
   bancoId: int('banco_id').notNull().references(() => bancos.id),
 })
+
+// ============================================================
+// AUDITORIA — log de mutations protegidas com requirePerm
+// ============================================================
+export const auditoria = mysqlTable('auditoria', {
+  id:            int('id').primaryKey().autoincrement(),
+  usuarioId:     int('usuario_id').notNull(),
+  usuarioNome:   varchar('usuario_nome', { length: 100 }), // denormalizado pra preservar histórico
+  perfil:        varchar('perfil', { length: 50 }),
+  recurso:       varchar('recurso', { length: 100 }).notNull(), // ex: 'processo:editar'
+  procedurePath: varchar('procedure_path', { length: 200 }).notNull(), // ex: 'processos.atualizar'
+  inputJson:     text('input_json'), // JSON do input (pode ser truncado)
+  ip:            varchar('ip', { length: 45 }),
+  criadoEm:      datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
+})

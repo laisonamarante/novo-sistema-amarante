@@ -5,6 +5,7 @@ import { processosRouter }      from './processos'
 import { tarefasRouter, preAnaliseRouter, pontoRouter, cadastrosRouter } from './cadastros'
 import { advertenciasRouter, avisosRouter, permissoesRouter, permissoesPerfilRouter } from './advertencias'
 import { chatRouter } from './chat'
+import { auditoriaRouter } from './auditoria'
 
 export const appRouter = router({
   auth:         authRouter,
@@ -19,6 +20,7 @@ export const appRouter = router({
   permissoes:   permissoesRouter,
   permissoesPerfil: permissoesPerfilRouter,
   chat:         chatRouter,
+  auditoria:    auditoriaRouter,
 })
 
 export type AppRouter = typeof appRouter
