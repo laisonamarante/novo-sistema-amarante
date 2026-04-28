@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { eq, like, and, or, desc, inArray, sql, isNull } from 'drizzle-orm'
-import { router, protectedProcedure } from '../trpc'
+import { router, protectedProcedure, requirePerm } from '../trpc'
 import { TRPCError } from '@trpc/server'
 import {
   processos, processoCompradores, processoVendedores, processoImoveis,
@@ -845,7 +845,7 @@ export const processosRouter = router({
       return { ...p, compradores, vendedores, imoveis: imoveisList, etapas: etapasList, documentos, tarefas: tarefasList, historico, atendimentos }
     }),
 
-  criar: protectedProcedure
+  criar: requirePerm('processo:criar')
     .input(processoInput)
     .mutation(async ({ input, ctx }) => {
       const { compradoresIds, vendedoresIds, imoveisIds, ...dadosIniciais } = input
@@ -882,7 +882,7 @@ export const processosRouter = router({
       return { id }
     }),
 
-  criarDaPreAnalise: protectedProcedure
+  criarDaPreAnalise: requirePerm('processo:criar')
     .input(z.object({ preAnaliseId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const wherePreAnalise = isPerfilInterno(ctx.usuario?.perfil)
@@ -1008,7 +1008,7 @@ export const processosRouter = router({
       })
     }),
 
-  atualizar: protectedProcedure
+  atualizar: requirePerm('processo:editar')
     .input(z.object({ id: z.number() }).merge(processoInput.partial()))
     .mutation(async ({ input, ctx }) => {
       const { id, compradoresIds, vendedoresIds, imoveisIds, ...dadosIniciais } = input
@@ -1146,7 +1146,7 @@ export const processosRouter = router({
       return { ok: true }
     }),
 
-  arquivar: protectedProcedure
+  arquivar: requirePerm('processo:arquivar')
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       await assertProcessoAcesso(ctx.db, ctx.usuario, input.id)

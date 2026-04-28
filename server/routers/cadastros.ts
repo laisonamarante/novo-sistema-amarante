@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { eq, and, desc, gte, lte, sql, or, inArray } from 'drizzle-orm'
-import { router, protectedProcedure } from '../trpc'
+import { router, protectedProcedure, requirePerm } from '../trpc'
 import { TRPCError } from '@trpc/server'
 import {
   tarefas, pontos, preAnalises, usuarios, avisos, advertencias,
@@ -512,7 +512,7 @@ export const tarefasRouter = router({
       return result[0] as unknown as any[]
     }),
 
-  criar: protectedProcedure
+  criar: requirePerm('tarefa:criar')
     .input(z.object({
       processoId:  z.number().optional(),
       executanteId: z.number(),
@@ -566,7 +566,7 @@ export const tarefasRouter = router({
       return { ok: true }
     }),
 
-  concluir: protectedProcedure
+  concluir: requirePerm('tarefa:resolver')
     .input(z.object({
       id: z.number(),
       status: z.enum(['Pendente','Resolvida','Encerrada']).optional(),
@@ -650,7 +650,7 @@ export const tarefasRouter = router({
       return { ok: true }
     }),
 
-  concluirEmMassa: protectedProcedure
+  concluirEmMassa: requirePerm('tarefa:resolver')
     .input(z.object({
       ids: z.array(z.number()).min(1),
       status: z.enum(['Pendente','Resolvida','Encerrada']).optional(),
@@ -729,7 +729,7 @@ export const preAnaliseRouter = router({
       return result[0] as unknown as any[]
     }),
 
-  criar: protectedProcedure
+  criar: requirePerm('pre_analise:criar')
     .input(z.object({
       bancos:              z.string(),
       nome:                z.string().min(1),
@@ -772,7 +772,7 @@ export const preAnaliseRouter = router({
       return { ok: true, count: bancosList.length }
     }),
 
-  atualizar: protectedProcedure
+  atualizar: requirePerm('pre_analise:editar')
     .input(z.object({
       id:             z.number(),
       situacao:       z.string().optional(),
@@ -840,7 +840,7 @@ export const preAnaliseRouter = router({
       return { ok: true }
     }),
 
-  excluir: protectedProcedure
+  excluir: requirePerm('pre_analise:excluir')
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.usuario.perfil !== 'Administrador') {
@@ -959,9 +959,9 @@ export const cadastrosRouter = router({
   agencias: router({
     listar:  protectedProcedure.input(z.object({ bancoId: z.number().optional() })).query(({ input, ctx }) =>
       ctx.db.select().from(agencias).where(input.bancoId ? and(eq(agencias.ativo, true), eq(agencias.bancoId, input.bancoId)) : eq(agencias.ativo, true))),
-    criar:   protectedProcedure.input(z.object({ bancoId: z.number(), nome: z.string(), codigo: z.string().optional(), cidade: z.string().optional(), uf: z.string().optional() }))
+    criar:   requirePerm('cadastro:agencia:criar').input(z.object({ bancoId: z.number(), nome: z.string(), codigo: z.string().optional(), cidade: z.string().optional(), uf: z.string().optional() }))
       .mutation(({ input, ctx }) => ctx.db.insert(agencias).values(input)),
-    editar:  protectedProcedure.input(z.object({
+    editar:  requirePerm('cadastro:agencia:editar').input(z.object({
       id: z.number(),
       bancoId: z.number().optional(),
       nome: z.string().optional(),
@@ -972,7 +972,7 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(agencias).set(dados).where(eq(agencias.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(agencias).set({ ativo: false }).where(eq(agencias.id, input.id))),
+    excluir: requirePerm('cadastro:agencia:excluir').input(z.object({ id: z.number() })).mutation(({ input, ctx }) => ctx.db.update(agencias).set({ ativo: false }).where(eq(agencias.id, input.id))),
   }),
 
   modalidades: router({
@@ -1128,7 +1128,7 @@ export const cadastrosRouter = router({
       const scope = getConstrutorasScopeCondition(ctx.usuario)
       return ctx.db.select().from(construtoras).where(and(eq(construtoras.ativo, true), scope))
     }),
-    criar:  protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:construtora:criar').input(z.object({
       nome: z.string(),
       cnpj: z.string().optional(),
       contato: z.string().optional(),
@@ -1153,7 +1153,7 @@ export const cadastrosRouter = router({
       const dados = applyConstrutoraOwnership({ ...input }, ctx.usuario)
       return ctx.db.insert(construtoras).values(dados as any)
     }),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('cadastro:construtora:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       cnpj: z.string().optional(),
@@ -1183,7 +1183,7 @@ export const cadastrosRouter = router({
       const scoped = applyConstrutoraOwnership({ ...dados }, ctx.usuario)
       return ctx.db.update(construtoras).set(scoped).where(eq(construtoras.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    excluir: requirePerm('cadastro:construtora:excluir').input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
       await assertScopedAccess(ctx.db, construtoras, construtoras.id, input.id, getConstrutorasScopeCondition(ctx.usuario), 'Acesso negado à construtora')
       return ctx.db.update(construtoras).set({ ativo: false }).where(eq(construtoras.id, input.id))
     }),
@@ -1194,7 +1194,7 @@ export const cadastrosRouter = router({
       const scope = getImobiliariasScopeCondition(ctx.usuario)
       return ctx.db.select().from(imobiliarias).where(and(eq(imobiliarias.ativo, true), scope))
     }),
-    criar:  protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:imobiliaria:criar').input(z.object({
       nome: z.string(),
       cnpj: z.string().optional(),
       contato: z.string().optional(),
@@ -1219,7 +1219,7 @@ export const cadastrosRouter = router({
       const dados = applyImobiliariaOwnership({ ...input }, ctx.usuario)
       return ctx.db.insert(imobiliarias).values(dados as any)
     }),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('cadastro:imobiliaria:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       cnpj: z.string().optional(),
@@ -1249,7 +1249,7 @@ export const cadastrosRouter = router({
       const scoped = applyImobiliariaOwnership({ ...dados }, ctx.usuario)
       return ctx.db.update(imobiliarias).set(scoped).where(eq(imobiliarias.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    excluir: requirePerm('cadastro:imobiliaria:excluir').input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
       await assertScopedAccess(ctx.db, imobiliarias, imobiliarias.id, input.id, getImobiliariasScopeCondition(ctx.usuario), 'Acesso negado à imobiliária')
       return ctx.db.update(imobiliarias).set({ ativo: false }).where(eq(imobiliarias.id, input.id))
     }),
@@ -1260,7 +1260,7 @@ export const cadastrosRouter = router({
       const scope = getCorretoresScopeCondition(ctx.usuario)
       return ctx.db.select().from(corretores).where(and(eq(corretores.ativo, true), scope))
     }),
-    criar:  protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:corretor:criar').input(z.object({
       nome: z.string(),
       cpf: z.string().optional(),
       creci: z.string().optional(),
@@ -1280,7 +1280,7 @@ export const cadastrosRouter = router({
       const dados = applyCorretorOwnership({ ...input }, ctx.usuario)
       return ctx.db.insert(corretores).values(dados as any)
     }),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('cadastro:corretor:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       cpf: z.string().optional(),
@@ -1305,7 +1305,7 @@ export const cadastrosRouter = router({
       const scoped = applyCorretorOwnership({ ...dados }, ctx.usuario)
       return ctx.db.update(corretores).set(scoped).where(eq(corretores.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    excluir: requirePerm('cadastro:corretor:excluir').input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
       await assertScopedAccess(ctx.db, corretores, corretores.id, input.id, getCorretoresScopeCondition(ctx.usuario), 'Acesso negado ao corretor')
       return ctx.db.update(corretores).set({ ativo: false }).where(eq(corretores.id, input.id))
     }),
@@ -1316,7 +1316,7 @@ export const cadastrosRouter = router({
       const scope = getParceirosScopeCondition(ctx.usuario)
       return ctx.db.select().from(parceiros).where(and(eq(parceiros.ativo, true), scope))
     }),
-    criar:  protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:parceiro:criar').input(z.object({
       nome: z.string(),
       nomeFantasia: z.string().optional(),
       razaoSocial: z.string().optional(),
@@ -1351,7 +1351,7 @@ export const cadastrosRouter = router({
       })
       return ctx.db.insert(parceiros).values(input as any)
     }),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('cadastro:parceiro:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       nomeFantasia: z.string().optional(),
@@ -1388,7 +1388,7 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(parceiros).set(dados as any).where(eq(parceiros.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    excluir: requirePerm('cadastro:parceiro:excluir').input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
       assertPodeGerenciarParceiro(ctx.usuario)
       await assertScopedAccess(ctx.db, parceiros, parceiros.id, input.id, getParceirosScopeCondition(ctx.usuario), 'Acesso negado ao parceiro')
       return ctx.db.update(parceiros).set({ ativo: false }).where(eq(parceiros.id, input.id))
@@ -1442,7 +1442,7 @@ export const cadastrosRouter = router({
       const scope = getSubestabelecidosScopeCondition(ctx.usuario)
       return ctx.db.select().from(subestabelecidos).where(and(eq(subestabelecidos.ativo, true), scope))
     }),
-    criar:  protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:subestabelecido:criar').input(z.object({
       nome: z.string(),
       cpf: z.string().optional(),
       fone: z.string().optional(),
@@ -1452,7 +1452,7 @@ export const cadastrosRouter = router({
       const dados = applySubestabelecidoOwnership({ ...input }, ctx.usuario)
       return ctx.db.insert(subestabelecidos).values(dados as any)
     }),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('cadastro:subestabelecido:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       cpf: z.string().optional(),
@@ -1465,7 +1465,7 @@ export const cadastrosRouter = router({
       const scoped = applySubestabelecidoOwnership({ ...dados }, ctx.usuario)
       return ctx.db.update(subestabelecidos).set(scoped).where(eq(subestabelecidos.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    excluir: requirePerm('cadastro:subestabelecido:excluir').input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
       await assertScopedAccess(ctx.db, subestabelecidos, subestabelecidos.id, input.id, getSubestabelecidosScopeCondition(ctx.usuario), 'Acesso negado ao subestabelecido')
       return ctx.db.update(subestabelecidos).set({ ativo: false }).where(eq(subestabelecidos.id, input.id))
     }),
@@ -1490,7 +1490,7 @@ export const cadastrosRouter = router({
       const scope = getImoveisScopeCondition(ctx.usuario)
       return scope ? ctx.db.select().from(imoveis).where(scope) : ctx.db.select().from(imoveis)
     }),
-    criar:  protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:imovel:criar').input(z.object({
       matricula: z.string().optional(),
       endereco: z.string(),
       numero: z.string().optional(),
@@ -1509,7 +1509,7 @@ export const cadastrosRouter = router({
       const dados = applyImovelOwnership({ ...input }, ctx.usuario)
       return ctx.db.insert(imoveis).values({ ...dados, criadoEm: new Date() } as any)
     }),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('cadastro:imovel:editar').input(z.object({
       id: z.number(),
       matricula: z.string().optional(),
       endereco: z.string().optional(),
@@ -1531,7 +1531,7 @@ export const cadastrosRouter = router({
       const scoped = applyImovelOwnership({ ...dados }, ctx.usuario)
       return ctx.db.update(imoveis).set(scoped).where(eq(imoveis.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    excluir: requirePerm('cadastro:imovel:excluir').input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
       await assertScopedAccess(ctx.db, imoveis, imoveis.id, input.id, getImoveisScopeCondition(ctx.usuario), 'Acesso negado ao imóvel')
       return ctx.db.delete(imoveis).where(eq(imoveis.id, input.id))
     }),
@@ -1802,7 +1802,7 @@ export const cadastrosRouter = router({
       if (!construtorasIds.length) return []
       return ctx.db.select().from(empreendimentos).where(and(eq(empreendimentos.ativo, true), inArray(empreendimentos.construtoraId, construtorasIds)))
     }),
-    criar:  protectedProcedure.input(z.object({
+    criar:  requirePerm('cadastro:empreendimento:criar').input(z.object({
       nome: z.string(),
       construtoraId: z.number().optional(),
       endereco: z.string().optional(),
@@ -1823,7 +1823,7 @@ export const cadastrosRouter = router({
 
       return ctx.db.insert(empreendimentos).values({ ...input, construtoraId })
     }),
-    editar: protectedProcedure.input(z.object({
+    editar: requirePerm('cadastro:empreendimento:editar').input(z.object({
       id: z.number(),
       nome: z.string().optional(),
       construtoraId: z.number().nullish(),
@@ -1845,7 +1845,7 @@ export const cadastrosRouter = router({
       const { id, ...dados } = input
       return ctx.db.update(empreendimentos).set(dados).where(eq(empreendimentos.id, id))
     }),
-    excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    excluir: requirePerm('cadastro:empreendimento:excluir').input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
       const construtorasIds = await getConstrutorasIdsAcessiveis(ctx.db, ctx.usuario)
       if (construtorasIds !== null) {
         const [registro] = await ctx.db.select({ id: empreendimentos.id, construtoraId: empreendimentos.construtoraId }).from(empreendimentos).where(eq(empreendimentos.id, input.id))
