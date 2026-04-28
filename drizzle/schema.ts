@@ -1,4 +1,5 @@
 import { mysqlTable, varchar, int, decimal, text, boolean, datetime, date, mysqlEnum, index, primaryKey } from 'drizzle-orm/mysql-core'
+import { sql } from 'drizzle-orm'
 
 // ============================================================
 // SEGURANÇA
@@ -17,7 +18,7 @@ export const usuarios = mysqlTable('usuarios', {
   bloqueioFim:    date('bloqueio_fim'),
   status:    mysqlEnum('status', ['Ativo','Bloqueado','Inativo']).notNull().default('Ativo'),
   ativo:     boolean('ativo').notNull().default(true),
-  criadoEm: datetime('criado_em').notNull().default(new Date()),
+  criadoEm: datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // ============================================================
@@ -181,8 +182,8 @@ export const clientes = mysqlTable('clientes', {
   corretorId:           int('corretor_id').references(() => corretores.id),
   parceiroId:           int('parceiro_id').references(() => parceiros.id),
   imobiliariaId:        int('imobiliaria_id').references(() => imobiliarias.id),
-  criadoEm:             datetime('criado_em').notNull().default(new Date()),
-  atualizadoEm:         datetime('atualizado_em').notNull().default(new Date()),
+  criadoEm:             datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
+  atualizadoEm:         datetime('atualizado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // ============================================================
@@ -204,7 +205,7 @@ export const imoveis = mysqlTable('imoveis', {
   parceiroId:    int('parceiro_id').references(() => parceiros.id),
   constutoraId:  int('construtora_id').references(() => construtoras.id),
   usuarioId:     int('usuario_id').references(() => usuarios.id),
-  criadoEm:    datetime('criado_em').notNull().default(new Date()),
+  criadoEm:    datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // ============================================================
@@ -311,8 +312,8 @@ export const processos = mysqlTable('processos', {
   constutoraId:          int('construtora_id').references(() => construtoras.id),
   // Controle
   criadoPorId:           int('criado_por_id').references(() => usuarios.id),
-  criadoEm:              datetime('criado_em').notNull().default(new Date()),
-  atualizadoEm:          datetime('atualizado_em').notNull().default(new Date()),
+  criadoEm:              datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
+  atualizadoEm:          datetime('atualizado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (t) => ({
   idxBanco:       index('idx_banco').on(t.bancoId),
   idxResponsavel: index('idx_responsavel').on(t.responsavelId),
@@ -367,7 +368,7 @@ export const processoHistorico = mysqlTable('processo_historico', {
   descricao:   text('descricao').notNull(),
   tipo:        varchar('tipo', { length: 50 }).default('historico'),
   etapa:       varchar('etapa', { length: 100 }),
-  criadoEm:    datetime('criado_em').notNull().default(new Date()),
+  criadoEm:    datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // Documentação do Processo
@@ -386,7 +387,7 @@ export const processoDocumentos = mysqlTable('processo_documentos', {
   motivoRecusa:    text('motivo_recusa'),
   dataValidade:    date('data_validade'),
   usuarioId:       int('usuario_id').references(() => usuarios.id),
-  criadoEm:        datetime('criado_em').notNull().default(new Date()),
+  criadoEm:        datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // Atendimentos do Processo
@@ -395,7 +396,7 @@ export const processoAtendimentos = mysqlTable('processo_atendimentos', {
   processoId:  int('processo_id').notNull().references(() => processos.id),
   usuarioId:   int('usuario_id').references(() => usuarios.id),
   descricao:   text('descricao').notNull(),
-  criadoEm:    datetime('criado_em').notNull().default(new Date()),
+  criadoEm:    datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // ============================================================
@@ -420,8 +421,8 @@ export const preAnalises = mysqlTable('pre_analises', {
   permitirReenvio:  boolean('permitir_reenvio').default(false),
   solicitanteId:    int('solicitante_id').references(() => usuarios.id),
   responsavelId:    int('responsavel_id').references(() => usuarios.id),
-  criadoEm:         datetime('criado_em').notNull().default(new Date()),
-  atualizadoEm:     datetime('atualizado_em').notNull().default(new Date()),
+  criadoEm:         datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
+  atualizadoEm:     datetime('atualizado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // ============================================================
@@ -436,7 +437,7 @@ export const tarefas = mysqlTable('tarefas', {
   dataLimite:   date('data_limite'),
   status:       mysqlEnum('status', ['Pendente','Resolvida','Encerrada']).notNull().default('Pendente'),
   acompanhamento: text('acompanhamento'),
-  criadoEm:     datetime('criado_em').notNull().default(new Date()),
+  criadoEm:     datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
   resolvidoEm:  datetime('resolvido_em'),
 })
 
@@ -450,8 +451,8 @@ export const chatConversas = mysqlTable('chat_conversas', {
   externoId:   int('externo_id').references(() => usuarios.id),
   processoId:  int('processo_id').references(() => processos.id),
   status:      varchar('status', { length: 20 }).notNull().default('aberta'),
-  criadoEm:    datetime('criado_em').notNull().default(new Date()),
-  atualizadoEm: datetime('atualizado_em').notNull().default(new Date()),
+  criadoEm:    datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
+  atualizadoEm: datetime('atualizado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (t) => ({
   idxInterno: index('idx_chat_conversas_interno').on(t.internoId),
   idxExterno: index('idx_chat_conversas_externo').on(t.externoId),
@@ -465,7 +466,7 @@ export const chatMensagens = mysqlTable('chat_mensagens', {
   texto:       text('texto').notNull(),
   processoIdDetectado: int('processo_id_detectado').references(() => processos.id),
   lidaEm:      datetime('lida_em'),
-  criadoEm:    datetime('criado_em').notNull().default(new Date()),
+  criadoEm:    datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (t) => ({
   idxConversa: index('idx_chat_mensagens_conversa').on(t.conversaId),
   idxRemetente: index('idx_chat_mensagens_remetente').on(t.remetenteId),
@@ -484,7 +485,7 @@ export const avisos = mysqlTable('avisos', {
   destinoId:   int('destino_id').references(() => usuarios.id), // null = todos
   lido:        boolean('lido').notNull().default(false),
   criadoPorId: int('criado_por_id').references(() => usuarios.id),
-  criadoEm:    datetime('criado_em').notNull().default(new Date()),
+  criadoEm:    datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 export const advertencias = mysqlTable('advertencias', {
@@ -496,7 +497,7 @@ export const advertencias = mysqlTable('advertencias', {
   justificativa:     text('justificativa'),
   status:            mysqlEnum('status', ['Pendente','Aceita','Contestada','Em Análise','Rejeitada']).notNull().default('Pendente'),
   criadoPorId:       int('criado_por_id').references(() => usuarios.id),
-  criadoEm:          datetime('criado_em').notNull().default(new Date()),
+  criadoEm:          datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
   resolvidoEm:       datetime('resolvido_em'),
 })
 
@@ -580,7 +581,7 @@ export const contasPagar = mysqlTable('contas_pagar', {
   dataPagamento:    date('data_pagamento'),
   observacao:       text('observacao'),
   usuarioId:        int('usuario_id').references(() => usuarios.id),
-  criadoEm:         datetime('criado_em').notNull().default(new Date()),
+  criadoEm:         datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 export const contasReceber = mysqlTable('contas_receber', {
@@ -601,7 +602,7 @@ export const contasReceber = mysqlTable('contas_receber', {
   dataRecebimento:  date('data_recebimento'),
   observacao:       text('observacao'),
   usuarioId:        int('usuario_id').references(() => usuarios.id),
-  criadoEm:         datetime('criado_em').notNull().default(new Date()),
+  criadoEm:         datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 export const fluxoCaixa = mysqlTable('fluxo_caixa', {
@@ -616,7 +617,7 @@ export const fluxoCaixa = mysqlTable('fluxo_caixa', {
   contaPagarId:   int('conta_pagar_id').references(() => contasPagar.id),
   contaReceberId: int('conta_receber_id').references(() => contasReceber.id),
   usuarioId:      int('usuario_id').references(() => usuarios.id),
-  criadoEm:       datetime('criado_em').notNull().default(new Date()),
+  criadoEm:       datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // ============================================================
@@ -628,7 +629,7 @@ export const pontos = mysqlTable('pontos', {
   tipo:       mysqlEnum('tipo', ['Entrada','SaidaAlmoco','RetornoAlmoco','Saida']).notNull(),
   dataHora:   datetime('data_hora').notNull(),
   observacao: varchar('observacao', { length: 255 }),
-  criadoEm:   datetime('criado_em').notNull().default(new Date()),
+  criadoEm:   datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // ============================================================
@@ -645,7 +646,7 @@ export const arquivos = mysqlTable('arquivos', {
   mimeType:       varchar('mime_type', { length: 100 }),
   tamanho:        int('tamanho'),
   descricao:      varchar('descricao', { length: 255 }),
-  criadoEm:       datetime('criado_em').notNull().default(new Date()),
+  criadoEm:       datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
 // ============================================================
