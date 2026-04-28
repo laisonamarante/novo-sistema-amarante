@@ -126,7 +126,6 @@ export default function App() {
                 <Route path='financiamento/tarefas'        element={<RequirePerm perm='menu:tarefas'><Tarefas /></RequirePerm>} />
                 {/* Seguranca - protegido */}
                 <Route path='seguranca/usuarios'           element={<RequirePerm perm='menu:usuarios'><Usuarios /></RequirePerm>} />
-                <Route path='seguranca/tarefas'            element={<RequirePerm perm='menu:tarefas'><Tarefas /></RequirePerm>} />
                 <Route path='seguranca/advertencias'       element={<RequirePerm perm='menu:advertencias'><Advertencias /></RequirePerm>} />
                 <Route path='seguranca/avisos'             element={<RequirePerm perm='menu:avisos'><Avisos /></RequirePerm>} />
                 <Route path='seguranca/permissoes'         element={<RequirePerm perm='menu:configuracoes'><Permissoes /></RequirePerm>} />
