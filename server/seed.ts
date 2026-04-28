@@ -2,7 +2,7 @@ import { db } from './context'
 import bcrypt from 'bcryptjs'
 import { sql } from 'drizzle-orm'
 import {
-  usuarios, bancos, agencias, modalidades, fluxos, situacoes, etapas,
+  usuarios, bancos, agencias, modalidades, fluxos, situacoes, etapas, fluxoEtapas,
   simuladores, finEmpresas, finContas, finFornecedores, finDevedores,
   finTipoDespesas, finTipoReceitas, finNaturezas, documentosTipos
 } from '../drizzle/schema'
@@ -60,21 +60,42 @@ async function seed() {
   ]).onDuplicateKeyUpdate({ set: { nome: sql`VALUES(nome)` } })
   console.log('✅ Fluxos criados')
 
-  // Etapas padrão (fluxo SFH-CH = id 1)
-  await db.insert(etapas).values([
-    { fluxoId: 1, nome: 'Processo Criado',                          ordem: 1,  tolerancia: 0 },
-    { fluxoId: 1, nome: 'Análise Coban',                             ordem: 2,  tolerancia: 1 },
-    { fluxoId: 1, nome: 'Atualização Cadastral / Abertura de conta', ordem: 3,  tolerancia: 3 },
-    { fluxoId: 1, nome: 'SAC. Análise de Credito',                   ordem: 4,  tolerancia: 4 },
-    { fluxoId: 1, nome: 'Elaboração de Formularios',                 ordem: 5,  tolerancia: 2 },
-    { fluxoId: 1, nome: 'Acione de Vistoria',                        ordem: 6,  tolerancia: 8 },
-    { fluxoId: 1, nome: 'Análise Jurídica',                          ordem: 7,  tolerancia: 5 },
-    { fluxoId: 1, nome: 'Emissão de Contrato',                       ordem: 8,  tolerancia: 3 },
-    { fluxoId: 1, nome: 'Formalização',                              ordem: 9,  tolerancia: 1 },
-    { fluxoId: 1, nome: 'Registro em Cartorio',                      ordem: 10, tolerancia: 0 },
-    { fluxoId: 1, nome: 'Liberação de Recurso',                      ordem: 11, tolerancia: 0 },
-  ]).onDuplicateKeyUpdate({ set: { nome: sql`VALUES(nome)` } })
+  // Etapas padrão — sem fluxoId, vínculo com fluxo via fluxo_etapas
+  const etapasPadrao = [
+    { nome: 'Processo Criado',                          ordem: 1,  tolerancia: 0 },
+    { nome: 'Análise Coban',                             ordem: 2,  tolerancia: 1 },
+    { nome: 'Atualização Cadastral / Abertura de conta', ordem: 3,  tolerancia: 3 },
+    { nome: 'SAC. Análise de Credito',                   ordem: 4,  tolerancia: 4 },
+    { nome: 'Elaboração de Formularios',                 ordem: 5,  tolerancia: 2 },
+    { nome: 'Acione de Vistoria',                        ordem: 6,  tolerancia: 8 },
+    { nome: 'Análise Jurídica',                          ordem: 7,  tolerancia: 5 },
+    { nome: 'Emissão de Contrato',                       ordem: 8,  tolerancia: 3 },
+    { nome: 'Formalização',                              ordem: 9,  tolerancia: 1 },
+    { nome: 'Registro em Cartorio',                      ordem: 10, tolerancia: 0 },
+    { nome: 'Liberação de Recurso',                      ordem: 11, tolerancia: 0 },
+  ]
+  await db.insert(etapas).values(etapasPadrao)
+    .onDuplicateKeyUpdate({ set: { nome: sql`VALUES(nome)` } })
   console.log('✅ Etapas criadas')
+
+  // Vincular etapas ao fluxo SFH-CH (id=1) via fluxo_etapas (modelo N:N).
+  // Pula se já houver vínculos pra este fluxo (idempotência manual — fluxo_etapas
+  // não tem UNIQUE KEY composto).
+  const vinculosExistentes = await db.select({ id: fluxoEtapas.id }).from(fluxoEtapas)
+    .where(sql`${fluxoEtapas.fluxoId} = 1`)
+  if (vinculosExistentes.length === 0) {
+    const etapasInseridas = await db.select({ id: etapas.id, nome: etapas.nome }).from(etapas)
+    const nomeIdMap = new Map(etapasInseridas.map(e => [e.nome, e.id]))
+    const vinculosFluxoSfh = etapasPadrao
+      .map(e => ({ fluxoId: 1, etapaId: nomeIdMap.get(e.nome)!, ordem: e.ordem }))
+      .filter(v => v.etapaId)
+    if (vinculosFluxoSfh.length) {
+      await db.insert(fluxoEtapas).values(vinculosFluxoSfh)
+    }
+    console.log('✅ Vínculos fluxo↔etapa criados')
+  } else {
+    console.log('⏭️  Vínculos fluxo↔etapa já existem, pulando')
+  }
 
   // Situações
   await db.insert(situacoes).values([

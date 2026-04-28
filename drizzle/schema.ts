@@ -225,8 +225,10 @@ export const situacoes = mysqlTable('situacoes', {
 })
 
 export const etapas = mysqlTable('etapas', {
+  // Etapa pertence a fluxos via N:N (`fluxo_etapas`). Não há FK direta — a coluna
+  // `fluxo_id` legacy foi removida em 2026-04-28 (estava causando bug ativo na
+  // tela ConfigurarFluxo).
   id:          int('id').primaryKey().autoincrement(),
-  fluxoId:     int('fluxo_id').references(() => fluxos.id),
   nome:        varchar('nome', { length: 100 }).notNull(),
   ordem:       int('ordem').notNull().default(0),
   tolerancia:  int('tolerancia').default(0), // dias de tolerância

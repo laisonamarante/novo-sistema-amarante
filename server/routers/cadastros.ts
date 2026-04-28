@@ -1096,10 +1096,9 @@ export const cadastrosRouter = router({
   }),
 
   etapas: router({
-    listar: protectedProcedure.input(z.object({ fluxoId: z.number().optional() })).query(({ input, ctx }) =>
-      ctx.db.select().from(etapas).where(input.fluxoId ? and(eq(etapas.ativo, true), eq(etapas.fluxoId, input.fluxoId)) : eq(etapas.ativo, true))),
+    listar: protectedProcedure.input(z.object({}).optional()).query(({ ctx }) =>
+      ctx.db.select().from(etapas).where(eq(etapas.ativo, true))),
     criar:  protectedProcedure.input(z.object({
-      fluxoId: z.number().optional(),
       nome: z.string(),
       ordem: z.number().optional(),
       tolerancia: z.number().optional(),
@@ -1110,7 +1109,6 @@ export const cadastrosRouter = router({
     })).mutation(({ input, ctx }) => ctx.db.insert(etapas).values(input)),
     editar: protectedProcedure.input(z.object({
       id: z.number(),
-      fluxoId: z.number().optional(),
       nome: z.string().optional(),
       ordem: z.number().optional(),
       tolerancia: z.number().optional(),
