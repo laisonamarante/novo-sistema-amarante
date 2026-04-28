@@ -88,7 +88,7 @@ export function RelProcessos() {
           </div>
           {/* Construtora + Corretor */}
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Construtora" value={filtros.constutoraId||''} onChange={e=>setF('constutoraId',Number(e.target.value)||undefined)}
+            <Select label="Construtora" value={filtros.construtoraId||''} onChange={e=>setF('construtoraId',Number(e.target.value)||undefined)}
               options={(construtoras.data||[]).map((c:any)=>({value:c.id,label:c.nome}))} />
             <Select label="Corretor" value={filtros.corretorId||''} onChange={e=>setF('corretorId',Number(e.target.value)||undefined)}
               options={(corretores.data||[]).map((c:any)=>({value:c.id,label:c.nome}))} />

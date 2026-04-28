@@ -123,7 +123,7 @@ export function ProcessoForm() {
     valorFinanciado:formatCurrencyBr(0), valorParcela:formatCurrencyBr(0), numeroParcelas:0,
     valorDespesas:formatCurrencyBr(0), remuneracaoPerc:'0,00', remuneracaoValor:formatCurrencyBr(0),
     taxa:'0,00', tipoAmortizacao:'PRICE' as 'SAC'|'PRICE', tipoImovel:'Novo' as 'Novo'|'Usado',
-    parceiroId:0, corretorId:0, imobiliariaId:0, constutoraId:0,
+    parceiroId:0, corretorId:0, imobiliariaId:0, construtoraId:0,
     compradoresIds:[] as number[], vendedoresIds:[] as number[], imoveisIds:[] as number[],
   })
 
@@ -265,7 +265,7 @@ export function ProcessoForm() {
         tipoAmortizacao: ((p as any).tipoAmortizacao || 'PRICE') as 'SAC'|'PRICE',
         tipoImovel: ((p as any).tipoImovel || 'Novo') as 'Novo'|'Usado',
         parceiroId: p.parceiroId||0, corretorId: p.corretorId||0,
-        imobiliariaId: p.imobiliariaId||0, constutoraId: p.constutoraId||0,
+        imobiliariaId: p.imobiliariaId||0, construtoraId: p.construtoraId||0,
         compradoresIds: (p.compradores||[]).map((c: any) => c.cliente?.id).filter(Boolean) as number[],
         vendedoresIds: (p.vendedores||[]).map((v: any) => v.cliente?.id).filter(Boolean) as number[],
         imoveisIds: (p.imoveis||[]).map((i: any) => i.imovel?.id).filter(Boolean) as number[],
@@ -1484,7 +1484,7 @@ export function ProcessoForm() {
                 options={(corretores.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
               <Select label="Imobiliária" value={form.imobiliariaId} onChange={fn('imobiliariaId')}
                 options={(imobiliarias.data||[]).map(i=>({value:i.id,label:i.nome}))} placeholder="Selecione..."/>
-              <Select label="Construtora" value={form.constutoraId} onChange={fn('constutoraId')}
+              <Select label="Construtora" value={form.construtoraId} onChange={fn('construtoraId')}
                 options={(construtoras.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
             </fieldset>
           )}

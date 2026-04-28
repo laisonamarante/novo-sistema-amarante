@@ -23,8 +23,8 @@ export function usePermissoes() {
   const parceiroId = data?.parceiroId || null
   const corretorId = data?.corretorId || null
   const imobiliariaId = data?.imobiliariaId || null
-  const constutoraId = data?.constutoraId || null
+  const construtoraId = data?.construtoraId || null
   const subestabelecidoId = data?.subestabelecidoId || null
 
-  return { pode, perfil, isExterno, isAdmin, isLoading, parceiroId, corretorId, imobiliariaId, constutoraId, subestabelecidoId }
+  return { pode, perfil, isExterno, isAdmin, isLoading, parceiroId, corretorId, imobiliariaId, construtoraId, subestabelecidoId }
 }

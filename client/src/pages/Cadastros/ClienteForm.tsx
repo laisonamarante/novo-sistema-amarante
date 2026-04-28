@@ -38,7 +38,7 @@ export function ClienteForm({ tipo, clienteId, modoPopup = false, onClose, onSav
     nomeMae:'', endereco:'', numero:'', bairro:'', cidade:'', uf:'', cep:'',
     fone1:'', fone2:'', contato2:'', fone3:'', contato3:'', email:'',
     bancoId: 0, numeroAgencia:'', numeroConta:'',
-    constutoraId:0, corretorId:0, parceiroId:0, imobiliariaId:0,
+    construtoraId:0, corretorId:0, parceiroId:0, imobiliariaId:0,
   })
 
   const utils    = trpc.useUtils()
@@ -71,7 +71,7 @@ export function ClienteForm({ tipo, clienteId, modoPopup = false, onClose, onSav
         fone1: d.fone1||'', fone2: d.fone2||'', contato2: d.contato2||'',
         fone3: d.fone3||'', contato3: d.contato3||'', email: d.email||'',
         bancoId: d.bancoId||0, numeroAgencia: d.numeroAgencia||'', numeroConta: d.numeroConta||'',
-        constutoraId: d.constutoraId||0, corretorId: d.corretorId||0,
+        construtoraId: d.construtoraId||0, corretorId: d.corretorId||0,
         parceiroId: d.parceiroId||0, imobiliariaId: d.imobiliariaId||0,
       })
     }
@@ -245,7 +245,7 @@ export function ClienteForm({ tipo, clienteId, modoPopup = false, onClose, onSav
         {aba === 'vinculo' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {mostrarVinculo('construtora') && (
-              <Select label="Construtora" value={form.constutoraId} onChange={e=>setForm(p=>({...p,constutoraId:Number(e.target.value)}))}
+              <Select label="Construtora" value={form.construtoraId} onChange={e=>setForm(p=>({...p,construtoraId:Number(e.target.value)}))}
                 options={(construtoras.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
             )}
             {mostrarVinculo('corretor') && (

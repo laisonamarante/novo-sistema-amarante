@@ -22,7 +22,7 @@ function getClienteScopeCondition(usuario: any) {
     case 'Imobiliária':
       return usuario?.imobiliariaId ? eq(clientes.imobiliariaId, usuario.imobiliariaId) : eq(clientes.id, -1)
     case 'Construtora':
-      return usuario?.constutoraId ? eq(clientes.constutoraId, usuario.constutoraId) : eq(clientes.id, -1)
+      return usuario?.construtoraId ? eq(clientes.construtoraId, usuario.construtoraId) : eq(clientes.id, -1)
     default:
       return eq(clientes.id, -1)
   }
@@ -49,7 +49,7 @@ function applyClienteOwnership(input: Record<string, any>, usuario: any) {
       break
     case 'Construtora':
       scoped.parceiroId = usuario?.parceiroId || undefined
-      scoped.constutoraId = usuario?.constutoraId || undefined
+      scoped.construtoraId = usuario?.construtoraId || undefined
       break
   }
 
@@ -97,7 +97,7 @@ const clienteInput = z.object({
   bancoId:             z.number().optional(),
   numeroAgencia:       z.string().optional(),
   numeroConta:         z.string().optional(),
-  constutoraId:        z.number().optional(),
+  construtoraId:        z.number().optional(),
   corretorId:          z.number().optional(),
   parceiroId:          z.number().optional(),
   imobiliariaId:       z.number().optional(),

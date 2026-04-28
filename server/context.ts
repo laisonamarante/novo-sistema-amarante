@@ -33,7 +33,7 @@ async function resolverVinculosDoUsuario(usuario: any) {
   let parceiroId = null
   let corretorId = null
   let imobiliariaId = null
-  let constutoraId = null
+  let construtoraId = null
   let subestabelecidoId = usuario.subestabelecidoId || null
 
   if (usuario.perfil === 'Parceiro') {
@@ -84,7 +84,7 @@ async function resolverVinculosDoUsuario(usuario: any) {
       .where(eq(schema.construtoras.usuarioId, usuario.id))
 
     if (construtora) {
-      constutoraId = construtora.id
+      construtoraId = construtora.id
       parceiroId = construtora.parceiroId
     }
   } else if (usuario.perfil === 'Subestabelecido' && usuario.subestabelecidoId) {
@@ -104,7 +104,7 @@ async function resolverVinculosDoUsuario(usuario: any) {
     parceiroId,
     corretorId,
     imobiliariaId,
-    constutoraId,
+    construtoraId,
     subestabelecidoId,
   }
 }

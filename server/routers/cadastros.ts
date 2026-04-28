@@ -56,8 +56,8 @@ function getProcessosScopeCondition(usuario: any) {
         ? or(eq(processos.criadoPorId, usuario.id), eq(processos.imobiliariaId, usuario.imobiliariaId))
         : eq(processos.criadoPorId, usuario.id)
     case 'Construtora':
-      return usuario?.constutoraId
-        ? or(eq(processos.criadoPorId, usuario.id), eq(processos.constutoraId, usuario.constutoraId))
+      return usuario?.construtoraId
+        ? or(eq(processos.criadoPorId, usuario.id), eq(processos.construtoraId, usuario.construtoraId))
         : eq(processos.criadoPorId, usuario.id)
     default:
       return eq(processos.id, -1)
@@ -77,8 +77,8 @@ function getConstrutorasScopeCondition(usuario: any) {
     case 'Subestabelecido':
       return usuario?.parceiroId ? eq(construtoras.parceiroId, usuario.parceiroId) : eq(construtoras.id, -1)
     case 'Construtora':
-      return usuario?.constutoraId
-        ? or(eq(construtoras.id, usuario.constutoraId), eq(construtoras.usuarioId, usuario.id))
+      return usuario?.construtoraId
+        ? or(eq(construtoras.id, usuario.construtoraId), eq(construtoras.usuarioId, usuario.id))
         : eq(construtoras.usuarioId, usuario.id)
     default:
       return eq(construtoras.id, -1)
@@ -152,8 +152,8 @@ function getImoveisScopeCondition(usuario: any) {
         ? or(eq(imoveis.usuarioId, usuario.id), eq(imoveis.imobiliariaId, usuario.imobiliariaId))
         : eq(imoveis.usuarioId, usuario.id)
     case 'Construtora':
-      return usuario?.constutoraId
-        ? or(eq(imoveis.usuarioId, usuario.id), eq(imoveis.constutoraId, usuario.constutoraId))
+      return usuario?.construtoraId
+        ? or(eq(imoveis.usuarioId, usuario.id), eq(imoveis.construtoraId, usuario.construtoraId))
         : eq(imoveis.usuarioId, usuario.id)
     default:
       return eq(imoveis.id, -1)
@@ -164,7 +164,7 @@ async function getConstrutorasIdsAcessiveis(db: any, usuario: any) {
   if (isPerfilInterno(usuario?.perfil)) return null
 
   if (usuario?.perfil === 'Construtora') {
-    return usuario?.constutoraId ? [usuario.constutoraId] : []
+    return usuario?.construtoraId ? [usuario.construtoraId] : []
   }
 
   if (['Parceiro', 'Subestabelecido'].includes(usuario?.perfil)) {
@@ -262,7 +262,7 @@ function applyImovelOwnership(input: Record<string, any>, usuario: any) {
       break
     case 'Construtora':
       scoped.parceiroId = usuario?.parceiroId || undefined
-      scoped.constutoraId = usuario?.constutoraId || undefined
+      scoped.construtoraId = usuario?.construtoraId || undefined
       break
   }
 
@@ -307,7 +307,7 @@ async function sincronizarVinculosDoUsuario(
     parceiroId?: number | null
     corretorId?: number | null
     imobiliariaId?: number | null
-    constutoraId?: number | null
+    construtoraId?: number | null
     subestabelecidoId?: number | null
   }
 ) {
@@ -339,11 +339,11 @@ async function sincronizarVinculosDoUsuario(
       return { subestabelecidoId: null }
 
     case 'Construtora':
-      if (!vinculos.constutoraId) {
+      if (!vinculos.construtoraId) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Selecione a construtora deste usuário' })
       }
-      await validarDisponibilidadeDeVinculo(db, construtoras, construtoras.id, construtoras.usuarioId, vinculos.constutoraId, usuarioId, 'Construtora')
-      await db.update(construtoras).set({ usuarioId }).where(eq(construtoras.id, vinculos.constutoraId))
+      await validarDisponibilidadeDeVinculo(db, construtoras, construtoras.id, construtoras.usuarioId, vinculos.construtoraId, usuarioId, 'Construtora')
+      await db.update(construtoras).set({ usuarioId }).where(eq(construtoras.id, vinculos.construtoraId))
       return { subestabelecidoId: null }
 
     case 'Subestabelecido':
@@ -1503,7 +1503,7 @@ export const cadastrosRouter = router({
       corretorId: z.number().optional(),
       imobiliariaId: z.number().optional(),
       parceiroId: z.number().optional(),
-      constutoraId: z.number().optional(),
+      construtoraId: z.number().optional(),
       usuarioId: z.number().optional(),
     })).mutation(({ input, ctx }) => {
       const dados = applyImovelOwnership({ ...input }, ctx.usuario)
@@ -1523,7 +1523,7 @@ export const cadastrosRouter = router({
       corretorId: z.number().nullish(),
       imobiliariaId: z.number().nullish(),
       parceiroId: z.number().nullish(),
-      constutoraId: z.number().nullish(),
+      construtoraId: z.number().nullish(),
       usuarioId: z.number().nullish(),
     })).mutation(async ({ input, ctx }) => {
       await assertScopedAccess(ctx.db, imoveis, imoveis.id, input.id, getImoveisScopeCondition(ctx.usuario), 'Acesso negado ao imóvel')
@@ -1554,7 +1554,7 @@ export const cadastrosRouter = router({
         ctx.db.select({ usuarioId: parceiros.usuarioId, parceiroId: parceiros.id }).from(parceiros).where(inArray(parceiros.usuarioId, ids)),
         ctx.db.select({ usuarioId: corretores.usuarioId, corretorId: corretores.id }).from(corretores).where(inArray(corretores.usuarioId, ids)),
         ctx.db.select({ usuarioId: imobiliarias.usuarioId, imobiliariaId: imobiliarias.id }).from(imobiliarias).where(inArray(imobiliarias.usuarioId, ids)),
-        ctx.db.select({ usuarioId: construtoras.usuarioId, constutoraId: construtoras.id }).from(construtoras).where(inArray(construtoras.usuarioId, ids)),
+        ctx.db.select({ usuarioId: construtoras.usuarioId, construtoraId: construtoras.id }).from(construtoras).where(inArray(construtoras.usuarioId, ids)),
       ])
 
       const parceiroPorUsuario = new Map<number, number>()
@@ -1572,7 +1572,7 @@ export const cadastrosRouter = router({
         if (row.usuarioId) imobiliariaPorUsuario.set(row.usuarioId, row.imobiliariaId)
       })
       construtorasVinculadas.forEach((row: any) => {
-        if (row.usuarioId) construtoraPorUsuario.set(row.usuarioId, row.constutoraId)
+        if (row.usuarioId) construtoraPorUsuario.set(row.usuarioId, row.construtoraId)
       })
 
       return lista.map((usuario) => ({
@@ -1580,7 +1580,7 @@ export const cadastrosRouter = router({
         parceiroId: usuario.perfil === 'Parceiro' ? parceiroPorUsuario.get(usuario.id) || null : null,
         corretorId: usuario.perfil === 'Corretor' ? corretorPorUsuario.get(usuario.id) || null : null,
         imobiliariaId: usuario.perfil === 'Imobiliária' ? imobiliariaPorUsuario.get(usuario.id) || null : null,
-        constutoraId: usuario.perfil === 'Construtora' ? construtoraPorUsuario.get(usuario.id) || null : null,
+        construtoraId: usuario.perfil === 'Construtora' ? construtoraPorUsuario.get(usuario.id) || null : null,
       }))
     }),
     criar:   protectedProcedure.input(z.object({
@@ -1800,33 +1800,33 @@ export const cadastrosRouter = router({
       const construtorasIds = await getConstrutorasIdsAcessiveis(ctx.db, ctx.usuario)
       if (construtorasIds === null) return ctx.db.select().from(empreendimentos).where(eq(empreendimentos.ativo, true))
       if (!construtorasIds.length) return []
-      return ctx.db.select().from(empreendimentos).where(and(eq(empreendimentos.ativo, true), inArray(empreendimentos.constutoraId, construtorasIds)))
+      return ctx.db.select().from(empreendimentos).where(and(eq(empreendimentos.ativo, true), inArray(empreendimentos.construtoraId, construtorasIds)))
     }),
     criar:  protectedProcedure.input(z.object({
       nome: z.string(),
-      constutoraId: z.number().optional(),
+      construtoraId: z.number().optional(),
       endereco: z.string().optional(),
       cidade: z.string().optional(),
       uf: z.string().optional(),
       tipo: z.enum(['Comercial','Residencial']).optional(),
     })).mutation(async ({ input, ctx }) => {
       const construtorasIds = await getConstrutorasIdsAcessiveis(ctx.db, ctx.usuario)
-      const constutoraId = isPerfilInterno(ctx.usuario?.perfil)
-        ? input.constutoraId
-        : (ctx.usuario?.perfil === 'Construtora' ? ctx.usuario.constutoraId : input.constutoraId)
+      const construtoraId = isPerfilInterno(ctx.usuario?.perfil)
+        ? input.construtoraId
+        : (ctx.usuario?.perfil === 'Construtora' ? ctx.usuario.construtoraId : input.construtoraId)
 
       if (construtorasIds !== null) {
-        if (!constutoraId || !construtorasIds.includes(constutoraId)) {
+        if (!construtoraId || !construtorasIds.includes(construtoraId)) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Construtora fora do escopo deste usuário' })
         }
       }
 
-      return ctx.db.insert(empreendimentos).values({ ...input, constutoraId })
+      return ctx.db.insert(empreendimentos).values({ ...input, construtoraId })
     }),
     editar: protectedProcedure.input(z.object({
       id: z.number(),
       nome: z.string().optional(),
-      constutoraId: z.number().nullish(),
+      construtoraId: z.number().nullish(),
       endereco: z.string().optional(),
       cidade: z.string().optional(),
       uf: z.string().optional(),
@@ -1834,11 +1834,11 @@ export const cadastrosRouter = router({
     })).mutation(async ({ input, ctx }) => {
       const construtorasIds = await getConstrutorasIdsAcessiveis(ctx.db, ctx.usuario)
       if (construtorasIds !== null) {
-        const [registro] = await ctx.db.select({ id: empreendimentos.id, constutoraId: empreendimentos.constutoraId }).from(empreendimentos).where(eq(empreendimentos.id, input.id))
-        if (!registro || !registro.constutoraId || !construtorasIds.includes(registro.constutoraId)) {
+        const [registro] = await ctx.db.select({ id: empreendimentos.id, construtoraId: empreendimentos.construtoraId }).from(empreendimentos).where(eq(empreendimentos.id, input.id))
+        if (!registro || !registro.construtoraId || !construtorasIds.includes(registro.construtoraId)) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Acesso negado ao empreendimento' })
         }
-        if (input.constutoraId && !construtorasIds.includes(input.constutoraId)) {
+        if (input.construtoraId && !construtorasIds.includes(input.construtoraId)) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Construtora fora do escopo deste usuário' })
         }
       }
@@ -1848,8 +1848,8 @@ export const cadastrosRouter = router({
     excluir: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
       const construtorasIds = await getConstrutorasIdsAcessiveis(ctx.db, ctx.usuario)
       if (construtorasIds !== null) {
-        const [registro] = await ctx.db.select({ id: empreendimentos.id, constutoraId: empreendimentos.constutoraId }).from(empreendimentos).where(eq(empreendimentos.id, input.id))
-        if (!registro || !registro.constutoraId || !construtorasIds.includes(registro.constutoraId)) {
+        const [registro] = await ctx.db.select({ id: empreendimentos.id, construtoraId: empreendimentos.construtoraId }).from(empreendimentos).where(eq(empreendimentos.id, input.id))
+        if (!registro || !registro.construtoraId || !construtorasIds.includes(registro.construtoraId)) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Acesso negado ao empreendimento' })
         }
       }

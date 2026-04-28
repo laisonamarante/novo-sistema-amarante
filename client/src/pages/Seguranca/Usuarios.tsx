@@ -126,8 +126,8 @@ export function Usuarios() {
           ? { tipo: 'Imobiliária', nome: nomesVinculos.imobiliarias.get(usuario.imobiliariaId) || `ID ${usuario.imobiliariaId}` }
           : null
       case 'Construtora':
-        return usuario.constutoraId
-          ? { tipo: 'Construtora', nome: nomesVinculos.construtoras.get(usuario.constutoraId) || `ID ${usuario.constutoraId}` }
+        return usuario.construtoraId
+          ? { tipo: 'Construtora', nome: nomesVinculos.construtoras.get(usuario.construtoraId) || `ID ${usuario.construtoraId}` }
           : null
       case 'Subestabelecido':
         return usuario.subestabelecidoId

@@ -11,7 +11,7 @@ export function Processos() {
   const [filtros, setFiltros] = useState({
     busca: params.get('busca')||'',
     bancoId:0, situacaoId:0, etapaId:0, agenciaId:0, modalidadeId:0,
-    parceiroId:0, corretorId:0, imobiliariaId:0, constutoraId:0,
+    parceiroId:0, corretorId:0, imobiliariaId:0, construtoraId:0,
     concluidos:false, arquivados:false, reprovados:false, codigo:0
   })
   const [ativos, setAtivos]   = useState({ ...filtros, pagina:1 })
@@ -67,7 +67,7 @@ export function Processos() {
                 options={(agenciasList.data||[]).map(a=>({value:a.id,label:a.nome}))}/>
               <Select label="Modalidade" value={filtros.modalidadeId} onChange={e=>setFiltros(p=>({...p,modalidadeId:Number(e.target.value)}))}
                 options={(modalidadesList.data||[]).map(m=>({value:m.id,label:m.nome}))}/>
-              <Select label="Construtora" value={filtros.constutoraId} onChange={e=>setFiltros(p=>({...p,constutoraId:Number(e.target.value)}))}
+              <Select label="Construtora" value={filtros.construtoraId} onChange={e=>setFiltros(p=>({...p,construtoraId:Number(e.target.value)}))}
                 options={(construtorasList.data||[]).map(c=>({value:c.id,label:c.nome}))}/>
             </div>
 

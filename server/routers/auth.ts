@@ -57,7 +57,7 @@ export const authRouter = router({
       resetRateLimit(rateLimitKey)
 
       // Buscar vinculos da entidade
-      let parceiroId = null, corretorId = null, imobiliariaId = null, constutoraId = null, subestabelecidoId = user.subestabelecidoId || null
+      let parceiroId = null, corretorId = null, imobiliariaId = null, construtoraId = null, subestabelecidoId = user.subestabelecidoId || null
       if (user.perfil === 'Parceiro') {
         const [p] = await ctx.db.select({ id: parceiros.id }).from(parceiros).where(eq(parceiros.usuarioId, user.id))
         if (p) parceiroId = p.id
@@ -69,17 +69,17 @@ export const authRouter = router({
         if (im) { imobiliariaId = im.id; parceiroId = im.parceiroId }
       } else if (user.perfil === 'Construtora') {
         const [co] = await ctx.db.select({ id: construtoras.id, parceiroId: construtoras.parceiroId }).from(construtoras).where(eq(construtoras.usuarioId, user.id))
-        if (co) { constutoraId = co.id; parceiroId = co.parceiroId }
+        if (co) { construtoraId = co.id; parceiroId = co.parceiroId }
       } else if (user.perfil === 'Subestabelecido' && user.subestabelecidoId) {
         const [sub] = await ctx.db.select({ id: subestabelecidos.id, parceiroId: subestabelecidos.parceiroId }).from(subestabelecidos).where(eq(subestabelecidos.id, user.subestabelecidoId))
         if (sub) { subestabelecidoId = sub.id; parceiroId = sub.parceiroId }
       }
       const token = jwt.sign(
-        { id: user.id, login: user.login, nome: user.nome, perfil: user.perfil, parceiroId, corretorId, imobiliariaId, constutoraId, subestabelecidoId },
+        { id: user.id, login: user.login, nome: user.nome, perfil: user.perfil, parceiroId, corretorId, imobiliariaId, construtoraId, subestabelecidoId },
         process.env.JWT_SECRET!,
         { expiresIn: '8h' }
       )
-      return { token, usuario: { id: user.id, nome: user.nome, login: user.login, perfil: user.perfil, parceiroId, corretorId, imobiliariaId, constutoraId, subestabelecidoId } }
+      return { token, usuario: { id: user.id, nome: user.nome, login: user.login, perfil: user.perfil, parceiroId, corretorId, imobiliariaId, construtoraId, subestabelecidoId } }
     }),
 
   me: protectedProcedure.query(({ ctx }) => ctx.usuario),

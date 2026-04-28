@@ -290,7 +290,7 @@ function TabEtapas() {
 function TabEmpreendimentos() {
   const perms = useCrudPermissoes('cadastro:empreendimento')
   const {data:cd}=trpc.cadastros.construtoras.listar.useQuery(); const co=(cd||[]).map((c:any)=>({value:c.id,label:c.nome}))
-  return <CadSimples label="Empreendimento" listarQuery={trpc.cadastros.empreendimentos.listar.useQuery()} criarMutation={(opts:any)=>trpc.cadastros.empreendimentos.criar.useMutation(opts)} editarMutation={(opts:any)=>trpc.cadastros.empreendimentos.editar.useMutation(opts)} excluirMutation={(opts:any)=>trpc.cadastros.empreendimentos.excluir.useMutation(opts)} campos={[{key:'nome',label:'Nome do Empreendimento',required:true},{key:'constutoraId',label:'Construtora',type:'select',options:co},{key:'tipo',label:'Tipo de Empreendimento',type:'select',options:TIPO_EMPREENDIMENTO_OPTIONS},{key:'endereco',label:'Endereço',hideTable:true},{key:'bairro',label:'Bairro',hideTable:true},{key:'cidade',label:'Cidade'},{key:'uf',label:'UF',type:'select',options:UF_OPTIONS}]} podeCriar={perms.podeCriar} podeEditar={perms.podeEditar} podeExcluir={perms.podeExcluir} />
+  return <CadSimples label="Empreendimento" listarQuery={trpc.cadastros.empreendimentos.listar.useQuery()} criarMutation={(opts:any)=>trpc.cadastros.empreendimentos.criar.useMutation(opts)} editarMutation={(opts:any)=>trpc.cadastros.empreendimentos.editar.useMutation(opts)} excluirMutation={(opts:any)=>trpc.cadastros.empreendimentos.excluir.useMutation(opts)} campos={[{key:'nome',label:'Nome do Empreendimento',required:true},{key:'construtoraId',label:'Construtora',type:'select',options:co},{key:'tipo',label:'Tipo de Empreendimento',type:'select',options:TIPO_EMPREENDIMENTO_OPTIONS},{key:'endereco',label:'Endereço',hideTable:true},{key:'bairro',label:'Bairro',hideTable:true},{key:'cidade',label:'Cidade'},{key:'uf',label:'UF',type:'select',options:UF_OPTIONS}]} podeCriar={perms.podeCriar} podeEditar={perms.podeEditar} podeExcluir={perms.podeExcluir} />
 }
 
 function TabConstrutoras() {
@@ -823,7 +823,7 @@ function TabImoveis() {
     {key:'uf',label:'UF',type:'select' as const,options:UF_OPTIONS},
     {key:'cep',label:'CEP'},
     {key:'tipo',label:'Tipo',type:'select' as const,options:[{value:'Residencial',label:'Residencial'},{value:'Comercial',label:'Comercial'},{value:'Terreno',label:'Terreno'},{value:'Galpão',label:'Galpão'}],hideTable:true},
-    ...(!(isExterno && perfil === 'Construtora') ? [{key:'constutoraId',label:'Construtora',type:'select' as const,options:co,hideTable:true}] : []),
+    ...(!(isExterno && perfil === 'Construtora') ? [{key:'construtoraId',label:'Construtora',type:'select' as const,options:co,hideTable:true}] : []),
     ...(!(isExterno && perfil === 'Corretor') ? [{key:'corretorId',label:'Corretor',type:'select' as const,options:ro,hideTable:true}] : []),
     ...(!isExterno ? [{key:'parceiroId',label:'Parceiro',type:'select' as const,options:po,hideTable:true}] : []),
     ...(!(isExterno && ['Corretor','Imobiliária'].includes(perfil)) ? [{key:'imobiliariaId',label:'Imobiliária',type:'select' as const,options:io,hideTable:true}] : []),

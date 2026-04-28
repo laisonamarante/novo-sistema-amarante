@@ -228,7 +228,7 @@ export const permissoesPerfilRouter = router({
       parceiroId: ctx.usuario.parceiroId || null,
       corretorId: ctx.usuario.corretorId || null,
       imobiliariaId: ctx.usuario.imobiliariaId || null,
-      constutoraId: ctx.usuario.constutoraId || null,
+      construtoraId: ctx.usuario.construtoraId || null,
       subestabelecidoId: ctx.usuario.subestabelecidoId || null,
     }
   }),

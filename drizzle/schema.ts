@@ -63,7 +63,7 @@ export const construtoras = mysqlTable('construtoras', {
 
 export const empreendimentos = mysqlTable('empreendimentos', {
   id:           int('id').primaryKey().autoincrement(),
-  constutoraId: int('construtora_id').references(() => construtoras.id),
+  construtoraId: int('construtora_id').references(() => construtoras.id),
   nome:         varchar('nome', { length: 150 }).notNull(),
   endereco:     varchar('endereco', { length: 200 }),
   cidade:       varchar('cidade', { length: 100 }),
@@ -178,7 +178,7 @@ export const clientes = mysqlTable('clientes', {
   numeroAgencia:        varchar('numero_agencia', { length: 20 }),
   numeroConta:          varchar('numero_conta', { length: 30 }),
   // Vínculos
-  constutoraId:         int('construtora_id').references(() => construtoras.id),
+  construtoraId:         int('construtora_id').references(() => construtoras.id),
   corretorId:           int('corretor_id').references(() => corretores.id),
   parceiroId:           int('parceiro_id').references(() => parceiros.id),
   imobiliariaId:        int('imobiliaria_id').references(() => imobiliarias.id),
@@ -203,7 +203,7 @@ export const imoveis = mysqlTable('imoveis', {
   corretorId:    int('corretor_id').references(() => corretores.id),
   imobiliariaId: int('imobiliaria_id').references(() => imobiliarias.id),
   parceiroId:    int('parceiro_id').references(() => parceiros.id),
-  constutoraId:  int('construtora_id').references(() => construtoras.id),
+  construtoraId:  int('construtora_id').references(() => construtoras.id),
   usuarioId:     int('usuario_id').references(() => usuarios.id),
   criadoEm:    datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
@@ -309,7 +309,7 @@ export const processos = mysqlTable('processos', {
   parceiroId:            int('parceiro_id').references(() => parceiros.id),
   corretorId:            int('corretor_id').references(() => corretores.id),
   imobiliariaId:         int('imobiliaria_id').references(() => imobiliarias.id),
-  constutoraId:          int('construtora_id').references(() => construtoras.id),
+  construtoraId:          int('construtora_id').references(() => construtoras.id),
   // Controle
   criadoPorId:           int('criado_por_id').references(() => usuarios.id),
   criadoEm:              datetime('criado_em').notNull().default(sql`CURRENT_TIMESTAMP`),

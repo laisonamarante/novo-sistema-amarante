@@ -14,7 +14,7 @@ interface Usuario {
   parceiroId?: number | null
   corretorId?: number | null
   imobiliariaId?: number | null
-  constutoraId?: number | null
+  construtoraId?: number | null
   subestabelecidoId?: number | null
 }
 

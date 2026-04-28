@@ -69,8 +69,8 @@ function getProcessoScopeSql(usuario: any) {
         ? sql`AND (p.criado_por_id = ${usuario.id} OR p.imobiliaria_id = ${usuario.imobiliariaId})`
         : sql`AND p.criado_por_id = ${usuario.id}`
     case 'Construtora':
-      return usuario?.constutoraId
-        ? sql`AND (p.criado_por_id = ${usuario.id} OR p.construtora_id = ${usuario.constutoraId})`
+      return usuario?.construtoraId
+        ? sql`AND (p.criado_por_id = ${usuario.id} OR p.construtora_id = ${usuario.construtoraId})`
         : sql`AND p.criado_por_id = ${usuario.id}`
     default:
       return sql`AND 1 = 0`
@@ -95,8 +95,8 @@ function getProcessoScopeCondition(usuario: any) {
         ? or(eq(processos.criadoPorId, usuario.id), eq(processos.imobiliariaId, usuario.imobiliariaId))
         : eq(processos.criadoPorId, usuario.id)
     case 'Construtora':
-      return usuario?.constutoraId
-        ? or(eq(processos.criadoPorId, usuario.id), eq(processos.constutoraId, usuario.constutoraId))
+      return usuario?.construtoraId
+        ? or(eq(processos.criadoPorId, usuario.id), eq(processos.construtoraId, usuario.construtoraId))
         : eq(processos.criadoPorId, usuario.id)
     default:
       return eq(processos.id, -1)
@@ -115,7 +115,7 @@ function getClienteScopeCondition(usuario: any) {
     case 'Imobiliária':
       return usuario?.imobiliariaId ? eq(clientes.imobiliariaId, usuario.imobiliariaId) : eq(clientes.id, -1)
     case 'Construtora':
-      return usuario?.constutoraId ? eq(clientes.constutoraId, usuario.constutoraId) : eq(clientes.id, -1)
+      return usuario?.construtoraId ? eq(clientes.construtoraId, usuario.construtoraId) : eq(clientes.id, -1)
     default:
       return eq(clientes.id, -1)
   }
@@ -139,8 +139,8 @@ function getImovelScopeCondition(usuario: any) {
         ? or(eq(imoveis.usuarioId, usuario.id), eq(imoveis.imobiliariaId, usuario.imobiliariaId))
         : eq(imoveis.usuarioId, usuario.id)
     case 'Construtora':
-      return usuario?.constutoraId
-        ? or(eq(imoveis.usuarioId, usuario.id), eq(imoveis.constutoraId, usuario.constutoraId))
+      return usuario?.construtoraId
+        ? or(eq(imoveis.usuarioId, usuario.id), eq(imoveis.construtoraId, usuario.construtoraId))
         : eq(imoveis.usuarioId, usuario.id)
     default:
       return eq(imoveis.id, -1)
@@ -169,7 +169,7 @@ function applyProcessoOwnership(input: Record<string, any>, usuario: any) {
       break
     case 'Construtora':
       scoped.parceiroId = usuario?.parceiroId || undefined
-      scoped.constutoraId = usuario?.constutoraId || undefined
+      scoped.construtoraId = usuario?.construtoraId || undefined
       break
   }
 
@@ -197,7 +197,7 @@ function applyClienteOwnership(input: Record<string, any>, usuario: any) {
       break
     case 'Construtora':
       scoped.parceiroId = usuario?.parceiroId || undefined
-      scoped.constutoraId = usuario?.constutoraId || undefined
+      scoped.construtoraId = usuario?.construtoraId || undefined
       break
   }
 
@@ -261,12 +261,12 @@ async function encontrarBancoDaPreAnalise(db: any, nomeBanco?: string | null) {
 
 async function resolverVinculosUsuario(db: any, usuario: any) {
   if (!usuario?.id || !usuario?.perfil) return usuario
-  if (usuario.parceiroId || usuario.corretorId || usuario.imobiliariaId || usuario.constutoraId) return usuario
+  if (usuario.parceiroId || usuario.corretorId || usuario.imobiliariaId || usuario.construtoraId) return usuario
 
   let parceiroId = null
   let corretorId = null
   let imobiliariaId = null
-  let constutoraId = null
+  let construtoraId = null
   let subestabelecidoId = usuario.subestabelecidoId || null
 
   if (usuario.perfil === 'Parceiro') {
@@ -308,7 +308,7 @@ async function resolverVinculosUsuario(db: any, usuario: any) {
       .where(eq(construtoras.usuarioId, usuario.id))
 
     if (construtora) {
-      constutoraId = construtora.id
+      construtoraId = construtora.id
       parceiroId = construtora.parceiroId
     }
   } else if (usuario.perfil === 'Subestabelecido' && usuario.subestabelecidoId) {
@@ -323,7 +323,7 @@ async function resolverVinculosUsuario(db: any, usuario: any) {
     }
   }
 
-  return { ...usuario, parceiroId, corretorId, imobiliariaId, constutoraId, subestabelecidoId }
+  return { ...usuario, parceiroId, corretorId, imobiliariaId, construtoraId, subestabelecidoId }
 }
 
 function montarHistoricoPreAnalise(preAnalise: any, bancoNome?: string) {
@@ -421,8 +421,8 @@ async function validarRelacionamentosProcesso(db: any, usuario: any, dados: Reco
       const [imobiliaria] = await db.select({ id: imobiliarias.id }).from(imobiliarias).where(and(eq(imobiliarias.id, dados.imobiliariaId), eq(imobiliarias.parceiroId, usuario.parceiroId)))
       if (!imobiliaria) throw new TRPCError({ code: 'FORBIDDEN', message: 'Imobiliária fora do escopo deste usuário' })
     }
-    if (dados.constutoraId) {
-      const [construtora] = await db.select({ id: construtoras.id }).from(construtoras).where(and(eq(construtoras.id, dados.constutoraId), eq(construtoras.parceiroId, usuario.parceiroId)))
+    if (dados.construtoraId) {
+      const [construtora] = await db.select({ id: construtoras.id }).from(construtoras).where(and(eq(construtoras.id, dados.construtoraId), eq(construtoras.parceiroId, usuario.parceiroId)))
       if (!construtora) throw new TRPCError({ code: 'FORBIDDEN', message: 'Construtora fora do escopo deste usuário' })
     }
     return
@@ -446,13 +446,13 @@ async function validarRelacionamentosProcesso(db: any, usuario: any, dados: Reco
   }
 
   if (usuario?.perfil === 'Construtora') {
-    if (!usuario?.constutoraId) throw new TRPCError({ code: 'FORBIDDEN', message: 'Usuário construtora sem vínculo configurado' })
-    if (dados.constutoraId && dados.constutoraId !== usuario.constutoraId) throw new TRPCError({ code: 'FORBIDDEN', message: 'Construtora fora do escopo deste usuário' })
+    if (!usuario?.construtoraId) throw new TRPCError({ code: 'FORBIDDEN', message: 'Usuário construtora sem vínculo configurado' })
+    if (dados.construtoraId && dados.construtoraId !== usuario.construtoraId) throw new TRPCError({ code: 'FORBIDDEN', message: 'Construtora fora do escopo deste usuário' })
     if (usuario?.parceiroId && dados.parceiroId && dados.parceiroId !== usuario.parceiroId) throw new TRPCError({ code: 'FORBIDDEN', message: 'Parceiro fora do escopo deste usuário' })
   }
 
-  if (dados.constutoraId && usuario?.parceiroId) {
-    const [construtora] = await db.select({ id: construtoras.id }).from(construtoras).where(and(eq(construtoras.id, dados.constutoraId), eq(construtoras.parceiroId, usuario.parceiroId)))
+  if (dados.construtoraId && usuario?.parceiroId) {
+    const [construtora] = await db.select({ id: construtoras.id }).from(construtoras).where(and(eq(construtoras.id, dados.construtoraId), eq(construtoras.parceiroId, usuario.parceiroId)))
     if (!construtora) throw new TRPCError({ code: 'FORBIDDEN', message: 'Construtora fora do escopo deste usuário' })
   }
 }
@@ -637,7 +637,7 @@ const processoInput = z.object({
   parceiroId:          z.number().optional(),
   corretorId:          z.number().optional(),
   imobiliariaId:       z.number().optional(),
-  constutoraId:        z.number().optional(),
+  construtoraId:        z.number().optional(),
   compradoresIds:      z.array(z.number()).optional(),
   vendedoresIds:       z.array(z.number()).optional(),
   imoveisIds:          z.array(z.number()).optional(),
@@ -656,7 +656,7 @@ export const processosRouter = router({
       corretorId:      z.number().optional(),
       imobiliariaId:   z.number().optional(),
       parceiroId:      z.number().optional(),
-      constutoraId:    z.number().optional(),
+      construtoraId:    z.number().optional(),
       responsavelId:   z.number().optional(),
       codigo:          z.number().optional(),
       concluidos:      z.boolean().optional(),
@@ -741,7 +741,7 @@ export const processosRouter = router({
           ${input.corretorId ? sql`AND p.corretor_id = ${input.corretorId}` : sql``}
           ${input.imobiliariaId ? sql`AND p.imobiliaria_id = ${input.imobiliariaId}` : sql``}
           ${input.parceiroId ? sql`AND p.parceiro_id = ${input.parceiroId}` : sql``}
-          ${input.constutoraId ? sql`AND p.construtora_id = ${input.constutoraId}` : sql``}
+          ${input.construtoraId ? sql`AND p.construtora_id = ${input.construtoraId}` : sql``}
           ${input.responsavelId ? sql`AND p.responsavel_id = ${input.responsavelId}` : sql``}
           ${input.codigo ? sql`AND p.id = ${input.codigo}` : sql``}
           ${input.reprovados || input.somenteReprovados ? sql`AND p.reprovado = true` : sql`AND p.reprovado = false`}

@@ -32,8 +32,8 @@ function getProcessoScopeSql(usuario: any) {
         ? sql`AND (p.criado_por_id = ${usuario.id} OR p.imobiliaria_id = ${usuario.imobiliariaId})`
         : sql`AND p.criado_por_id = ${usuario.id}`
     case 'Construtora':
-      return usuario?.constutoraId
-        ? sql`AND (p.criado_por_id = ${usuario.id} OR p.construtora_id = ${usuario.constutoraId})`
+      return usuario?.construtoraId
+        ? sql`AND (p.criado_por_id = ${usuario.id} OR p.construtora_id = ${usuario.construtoraId})`
         : sql`AND p.criado_por_id = ${usuario.id}`
     default:
       return sql`AND 1 = 0`
