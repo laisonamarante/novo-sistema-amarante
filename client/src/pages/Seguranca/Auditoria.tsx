@@ -95,7 +95,7 @@ export function Auditoria() {
                     <div className="text-xs text-gray-500">id {l.usuarioId}</div>
                   </td>
                   <td className="px-4 py-2 text-xs">
-                    {l.perfil && <Badge>{l.perfil}</Badge>}
+                    {l.perfil && <Badge label={l.perfil} />}
                   </td>
                   <td className="px-4 py-2 text-xs font-mono text-blue-700">{l.recurso}</td>
                   <td className="px-4 py-2 text-xs font-mono text-gray-600">{l.procedurePath}</td>

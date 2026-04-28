@@ -76,13 +76,19 @@ async function registrarAuditoria(
 // Em mutations bem-sucedidas, registra automaticamente em `auditoria`.
 // Uso: `requirePerm('processo:criar').input(...).mutation(...)`
 export const requirePerm = (recurso: string) =>
-  t.procedure.use(isAuthed).use(async ({ ctx, next, path, type, rawInput }) => {
+  t.procedure.use(isAuthed).use(async (opts) => {
+    const { ctx, next, path, type } = opts
     if (!(await temPermissao(ctx, recurso))) {
       throw new TRPCError({ code: 'FORBIDDEN', message: `Permissão necessária: ${recurso}` })
     }
     const result = await next({ ctx })
     if (type === 'mutation' && result.ok) {
-      // Fire-and-forget — não awaitar (mas mantém connection pool ocupado por ms)
+      // Captura o rawInput (tRPC v11: getRawInput() retorna Promise)
+      let rawInput: unknown = undefined
+      try {
+        const getRawInput = (opts as any).getRawInput
+        if (typeof getRawInput === 'function') rawInput = await getRawInput()
+      } catch { /* ignore */ }
       void registrarAuditoria(ctx, recurso, path, rawInput)
     }
     return result
