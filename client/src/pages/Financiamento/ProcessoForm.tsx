@@ -47,6 +47,10 @@ import { AbaVinculo } from './processo-form/abas/AbaVinculo'
 import { AbaTarefas } from './processo-form/abas/AbaTarefas'
 import { AbaHistorico } from './processo-form/abas/AbaHistorico'
 import { AbaAtendimento } from './processo-form/abas/AbaAtendimento'
+import { AbaComprador } from './processo-form/abas/AbaComprador'
+import { AbaVendedor } from './processo-form/abas/AbaVendedor'
+import { AbaImovel } from './processo-form/abas/AbaImovel'
+import { AbaValores } from './processo-form/abas/AbaValores'
 
 const PROCESSO_FORM_ABAS_CADASTRO_INICIAL = new Set<Aba>(['dadosGerais', 'valores', 'comprador', 'vendedor', 'imovel'])
 
@@ -839,144 +843,32 @@ export function ProcessoForm() {
           )}
 
           {/* VALORES */}
-          {aba==='valores' && (
-            <fieldset disabled={processoTravadoParaExterno} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 disabled:opacity-80">
-              <Input label="Valor de Compra e Venda"  value={form.valorCompraVenda}    onChange={fc('valorCompraVenda')}   onBlur={formatarCampoMoeda('valorCompraVenda')}/>
-              <Input label="Valor da Avaliação"        value={form.valorAvaliacao}       onChange={fc('valorAvaliacao')}      onBlur={formatarCampoMoeda('valorAvaliacao')}      disabled={campoDesabilitado('valorAvaliacao')}      hint={campoInternoSomenteLeitura('valorAvaliacao') ? 'Uso interno' : undefined}/>
-              <Input label="Valor Recurso Próprio"     value={form.valorRecursoProprio}  onChange={fc('valorRecursoProprio')} onBlur={formatarCampoMoeda('valorRecursoProprio')}/>
-              <Input label="Valor do Subsídio"         value={form.valorSubsidio}        onChange={fc('valorSubsidio')}       onBlur={formatarCampoMoeda('valorSubsidio')}       disabled={campoDesabilitado('valorSubsidio')}       hint={campoInternoSomenteLeitura('valorSubsidio') ? 'Uso interno' : undefined}/>
-              <Input label="Valor FGTS"                value={form.valorFgts}            onChange={fc('valorFgts')}           onBlur={formatarCampoMoeda('valorFgts')}/>
-              <Input label="Valor do IQ"               value={form.valorIq}              onChange={fc('valorIq')}             onBlur={formatarCampoMoeda('valorIq')}/>
-              <Input label="Valor Financiado"          value={form.valorFinanciado}      onChange={fc('valorFinanciado')}     onBlur={formatarCampoMoeda('valorFinanciado')}/>
-              <Input label="Valor da Parcela"          value={form.valorParcela}         onChange={fc('valorParcela')}        onBlur={formatarCampoMoeda('valorParcela')}        disabled={campoDesabilitado('valorParcela')}        hint={campoInternoSomenteLeitura('valorParcela') ? 'Uso interno' : undefined}/>
-              <Input label="Número de Parcelas" type="number" value={form.numeroParcelas} onChange={fn('numeroParcelas')}/>
-              <Input label="Taxa de Juros" value={form.taxa} onChange={fp('taxa')} onBlur={formatarCampoPercentual('taxa')} placeholder="Ex: 8,50" disabled={campoDesabilitado('taxa')} hint={campoInternoSomenteLeitura('taxa') ? 'Uso interno' : undefined}/>
-              {!isExterno && <Input label="Valor Despesas (R$)" value={form.valorDespesas} onChange={fc('valorDespesas')} onBlur={formatarCampoMoeda('valorDespesas')}/>}
-              <Input label="Comissão (%)" value={form.remuneracaoPerc} onChange={fp('remuneracaoPerc')} onBlur={formatarCampoPercentual('remuneracaoPerc')} disabled={campoDesabilitado('remuneracaoPerc')} hint={campoInternoSomenteLeitura('remuneracaoPerc') ? 'Uso interno' : 'Percentual sobre valor financiado'}/>
-              <Input label="Comissão (R$)" value={form.remuneracaoValor} onChange={fc('remuneracaoValor')} onBlur={formatarCampoMoeda('remuneracaoValor')} disabled={campoDesabilitado('remuneracaoValor')} hint={campoInternoSomenteLeitura('remuneracaoValor') ? 'Uso interno' : 'Calculado automaticamente'}/>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Tipo Amortização</label>
-                <div className="flex gap-4 items-center h-10">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="radio" name="tipoAmortizacao" value="SAC" checked={form.tipoAmortizacao==='SAC'} onChange={()=>setForm(p=>({...p,tipoAmortizacao:'SAC'}))} className="text-blue-600"/>
-                    SAC
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="radio" name="tipoAmortizacao" value="PRICE" checked={form.tipoAmortizacao==='PRICE'} onChange={()=>setForm(p=>({...p,tipoAmortizacao:'PRICE'}))} className="text-blue-600"/>
-                    PRICE
-                  </label>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Situação do Imóvel</label>
-                <div className="flex gap-4 items-center h-10">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="radio" name="tipoImovel" value="Novo" checked={form.tipoImovel==='Novo'} onChange={()=>setForm(p=>({...p,tipoImovel:'Novo'}))} className="text-blue-600"/>
-                    Novo
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="radio" name="tipoImovel" value="Usado" checked={form.tipoImovel==='Usado'} onChange={()=>setForm(p=>({...p,tipoImovel:'Usado'}))} className="text-blue-600"/>
-                    Usado
-                  </label>
-                </div>
-              </div>
-            </fieldset>
-          )}
+          {aba==='valores' && <AbaValores />}
 
-          {/* COMPRADOR */}
           {aba==='comprador' && (
-            <div>
-              <div className="mb-4 flex justify-between items-center">
-                <h3 className="text-sm font-semibold text-gray-700">Compradores vinculados</h3>
-                {podeEditarDadosProcesso && (
-                  <Btn size="sm" icon={<Plus size={13}/>} onClick={()=>{setModalComprador(true);setBuscaCliente('');setModoManual(false);setClienteManualNome('');setClienteManualCpf('')}}>Incluir Comprador</Btn>
-                )}
-              </div>
-              {compradorData.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-8">Nenhum comprador vinculado.</p>
-              ) : (
-                <Table headers={['CPF/CNPJ','Nome','Email','Telefone','Proponente','']}>
-                  {compradorData.map((c: any) => (
-                    <tr key={c.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono">{formatCpfCnpj(c.cpfCnpj)}</td>
-                      <td className="px-4 py-3 text-sm font-medium">{c.nome}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">{c.email || '—'}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">{c.fone1 || '—'}</td>
-                      <td className="px-4 py-3 text-center">
-                        {isEdicao && podeEditarDadosProcesso ? <button onClick={()=>setProponente.mutate({processoId:Number(id),clienteId:c.id,tipo:'comprador',proponente:!c.proponente})} className={c.proponente ? "text-yellow-500" : "text-gray-300"} title="Proponente"><span style={{fontSize:'18px'}}>★</span></button> : <span className={c.proponente ? "text-yellow-500" : "text-gray-300"} style={{fontSize:'18px'}}>★</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        {podeEditarDadosProcesso && <button onClick={()=>handleRemoveComprador(c.id)} className="text-red-500 hover:text-red-700" title="Remover"><Trash2 size={14}/></button>}
-                      </td>
-                    </tr>
-                  ))}
-                </Table>
-              )}
-            </div>
+            <AbaComprador
+              compradorData={compradorData}
+              onAbrirIncluirComprador={()=>{setModalComprador(true);setBuscaCliente('');setModoManual(false);setClienteManualNome('');setClienteManualCpf('')}}
+              onRemoverComprador={handleRemoveComprador}
+              onTogglePropriedade={(clienteId, atual)=>setProponente.mutate({processoId:Number(id),clienteId,tipo:'comprador',proponente:!atual})}
+            />
           )}
 
-          {/* VENDEDOR */}
           {aba==='vendedor' && (
-            <div>
-              <div className="mb-4 flex justify-between items-center">
-                <h3 className="text-sm font-semibold text-gray-700">Vendedores vinculados</h3>
-                {podeIncluirVendedor && (
-                  <Btn size="sm" icon={<Plus size={13}/>} onClick={()=>{setModalVendedor(true);setBuscaCliente('');setModoManual(false);setClienteManualNome('');setClienteManualCpf('')}}>Incluir Vendedor</Btn>
-                )}
-              </div>
-              {vendedorData.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-8">Nenhum vendedor vinculado.</p>
-              ) : (
-                <Table headers={['CPF/CNPJ','Nome','Email','Telefone','Proponente','']}>
-                  {vendedorData.map((v: any) => (
-                    <tr key={v.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono">{formatCpfCnpj(v.cpfCnpj)}</td>
-                      <td className="px-4 py-3 text-sm font-medium">{v.nome}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">{v.email || '—'}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">{v.fone1 || '—'}</td>
-                      <td className="px-4 py-3 text-center">
-                        {podeAlterarVendedor ? <button onClick={()=>setProponente.mutate({processoId:Number(id),clienteId:v.id,tipo:'vendedor',proponente:!v.proponente})} className={v.proponente ? "text-yellow-500" : "text-gray-300"} title="Proponente"><span style={{fontSize:'18px'}}>★</span></button> : <span className={v.proponente ? "text-yellow-500" : "text-gray-300"} style={{fontSize:'18px'}}>★</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        {podeAlterarVendedor && <button onClick={()=>handleRemoveVendedor(v.id)} className="text-red-500 hover:text-red-700" title="Remover"><Trash2 size={14}/></button>}
-                      </td>
-                    </tr>
-                  ))}
-                </Table>
-              )}
-            </div>
+            <AbaVendedor
+              vendedorData={vendedorData}
+              onAbrirIncluirVendedor={()=>{setModalVendedor(true);setBuscaCliente('');setModoManual(false);setClienteManualNome('');setClienteManualCpf('')}}
+              onRemoverVendedor={handleRemoveVendedor}
+              onTogglePropriedade={(clienteId, atual)=>setProponente.mutate({processoId:Number(id),clienteId,tipo:'vendedor',proponente:!atual})}
+            />
           )}
 
-          {/* IMOVEL */}
           {aba==='imovel' && (
-            <div>
-              <div className="mb-4 flex justify-between items-center">
-                <h3 className="text-sm font-semibold text-gray-700">Imóveis vinculados</h3>
-                {podeIncluirImovel && (
-                  <Btn size="sm" icon={<Plus size={13}/>} onClick={()=>{setModalImovel(true);setBuscaImovel('');setModoManualImovel(false);setImovelForm(EMPTY_IMOVEL_FORM)}}>Incluir Imóvel</Btn>
-                )}
-              </div>
-              {imovelData.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-8">Nenhum imóvel vinculado.</p>
-              ) : (
-                <Table headers={['Matrícula','Endereço','Número','Complemento','Cidade','UF','CEP','']}>
-                  {imovelData.map((im: any) => (
-                    <tr key={im.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono">{im.matricula || '—'}</td>
-                      <td className="px-4 py-3 text-sm">{im.endereco || '—'}</td>
-                      <td className="px-4 py-3 text-sm">{im.numero || '—'}</td>
-                      <td className="px-4 py-3 text-sm">{im.complemento || '—'}</td>
-                      <td className="px-4 py-3 text-sm">{im.cidade}</td>
-                      <td className="px-4 py-3 text-sm">{im.uf}</td>
-                      <td className="px-4 py-3 text-sm">{im.cep || '—'}</td>
-                      <td className="px-4 py-3">
-                        {podeAlterarImovel && <button onClick={()=>handleRemoveImovel(im.id)} className="text-red-500 hover:text-red-700" title="Remover"><Trash2 size={14}/></button>}
-                      </td>
-                    </tr>
-                  ))}
-                </Table>
-              )}
-            </div>
+            <AbaImovel
+              imovelData={imovelData}
+              onAbrirIncluirImovel={()=>{setModalImovel(true);setBuscaImovel('');setModoManualImovel(false);setImovelForm(EMPTY_IMOVEL_FORM)}}
+              onRemoverImovel={handleRemoveImovel}
+            />
           )}
 
           {/* ETAPAS */}
