@@ -3,9 +3,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
 import { getStoredAuthToken } from '../../lib/auth-storage'
-import { Input, Select, Textarea, Btn, Card, Spinner, Alert, Badge, Table, Modal } from '../../components/ui'
+import { Input, Select, Textarea, Btn, Card, Spinner, Alert, Badge, Table } from '../../components/ui'
 import { formatCpfCnpj } from '../../lib/documento'
-import { ArrowLeft, Save, Printer, CheckCircle, Upload, Plus, MessageSquare, Trash2, Search, FileText, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Save, Printer, CheckCircle, Upload, Plus, MessageSquare, Trash2, FileText, AlertTriangle } from 'lucide-react'
 import {
   type Aba,
   EMPTY_HISTORICO_FORM,
@@ -39,6 +39,11 @@ import { ModalConcluirEtapa } from './processo-form/ModalConcluirEtapa'
 import { ModalPendenteEtapa } from './processo-form/ModalPendenteEtapa'
 import { ModalNovaTarefa } from './processo-form/ModalNovaTarefa'
 import { ModalReprovarDocumento } from './processo-form/ModalReprovarDocumento'
+import { ModalAtendimentoObrigatorio } from './processo-form/ModalAtendimentoObrigatorio'
+import { ModalHistorico } from './processo-form/ModalHistorico'
+import { ModalIncluirCliente } from './processo-form/ModalIncluirCliente'
+import { ModalIncluirImovel } from './processo-form/ModalIncluirImovel'
+import { ModalObsEtapa } from './processo-form/ModalObsEtapa'
 
 const PROCESSO_FORM_ABAS_CADASTRO_INICIAL = new Set<Aba>(['dadosGerais', 'valores', 'comprador', 'vendedor', 'imovel'])
 
@@ -1460,28 +1465,14 @@ export function ProcessoForm() {
         podeSalvar={!!podeEditarDadosProcesso}
       />
 
-      <Modal title="Registrar atendimento obrigatório" open={modalAtendimentoObrigatorio} onClose={()=>setModalAtendimentoObrigatorio(false)}>
-        <div className="space-y-4">
-          <Alert type="warning" message="Você alterou este processo. Informe o que foi feito antes de sair desta tela." />
-          <Textarea
-            label="O que foi feito neste processo? *"
-            value={atendimentoObrigatorioTexto}
-            onChange={e=>setAtendimentoObrigatorioTexto(e.target.value)}
-            rows={5}
-            placeholder="Ex.: Atualizei dados do contrato, conferi documentos, ajustei vínculo do comprador..."
-          />
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={()=>{setModalAtendimentoObrigatorio(false); setSaidaPendente(null)}}>Continuar na tela</Btn>
-            <Btn
-              loading={addAtendimento.isPending}
-              disabled={!atendimentoObrigatorioTexto.trim()}
-              onClick={handleSalvarAtendimentoObrigatorio}
-            >
-              Registrar e sair
-            </Btn>
-          </div>
-        </div>
-      </Modal>
+      <ModalAtendimentoObrigatorio
+        open={modalAtendimentoObrigatorio}
+        onClose={()=>{setModalAtendimentoObrigatorio(false); setSaidaPendente(null)}}
+        texto={atendimentoObrigatorioTexto}
+        onChangeTexto={setAtendimentoObrigatorioTexto}
+        loading={addAtendimento.isPending}
+        onSalvar={handleSalvarAtendimentoObrigatorio}
+      />
 
       {/* Modal Concluir Etapa */}
       <ModalConcluirEtapa
@@ -1514,167 +1505,83 @@ export function ProcessoForm() {
       />
 
       {/* Modal Incluir Histórico */}
-      <Modal title="Incluir Histórico" open={modalHistorico} onClose={()=>setModalHistorico(false)}>
-        <div className="space-y-4">
-          <Input label="Titulo *" value={historicoForm.titulo} onChange={e=>setHistoricoForm(p=>({...p,titulo:e.target.value}))} placeholder="Titulo do registro..."/>
-          <Textarea label="Descricao *" value={historicoForm.descricao} onChange={e=>setHistoricoForm(p=>({...p,descricao:e.target.value}))} rows={4} placeholder="Descreva..."/>
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={()=>setModalHistorico(false)}>Cancelar</Btn>
-            {podeEditarDadosProcesso && (
-              <Btn loading={criarHistorico.isPending}
-                onClick={()=>{if(historicoForm.titulo && historicoForm.descricao) criarHistorico.mutate({processoId:Number(id),titulo:historicoForm.titulo,descricao:historicoForm.descricao})}}>
-                Salvar
-              </Btn>
-            )}
-          </div>
-        </div>
-      </Modal>
+      <ModalHistorico
+        open={modalHistorico}
+        onClose={()=>setModalHistorico(false)}
+        form={historicoForm}
+        onChangeForm={setHistoricoForm}
+        podeEditar={!!podeEditarDadosProcesso}
+        loading={criarHistorico.isPending}
+        onSalvar={()=>{if(historicoForm.titulo && historicoForm.descricao) criarHistorico.mutate({processoId:Number(id),titulo:historicoForm.titulo,descricao:historicoForm.descricao})}}
+      />
 
       {/* Modal Incluir Comprador */}
-      <Modal title="Incluir Comprador" open={modalComprador} onClose={()=>setModalComprador(false)} size="lg">
-        <div className="space-y-4">
-          {!modoManual ? (
-            <>
-              <div className="relative">
-                <Input label="Buscar por nome ou CPF" value={buscaCliente} onChange={e=>setBuscaCliente(e.target.value)} placeholder="Digite pelo menos 2 caracteres..."/>
-                <Search size={14} className="absolute right-3 top-9 text-gray-400"/>
-              </div>
-              {buscaCliente.length >= 2 && (
-                <div className="border rounded max-h-60 overflow-y-auto">
-                  {clientesCompradores.isLoading && <div className="p-3 text-center text-gray-400 text-sm">Buscando...</div>}
-                  {clientesCompradores.data?.lista?.length === 0 && <div className="p-3 text-center text-gray-400 text-sm">Nenhum comprador encontrado.</div>}
-                  {(clientesCompradores.data?.lista||[]).map((c: any) => (
-                    <button key={c.id} onClick={()=>handleAddComprador(c.id)}
-                      disabled={form.compradoresIds.includes(c.id)}
-                      className={`w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-0 text-sm transition-colors ${form.compradoresIds.includes(c.id)?'opacity-50 bg-gray-50':''}`}>
-                      <span className="font-medium">{c.nome}</span>
-                      <span className="text-gray-400 ml-2">{formatCpfCnpj(c.cpfCnpj)}</span>
-                      {c.email && <span className="text-gray-400 ml-2 text-xs">{c.email}</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="pt-2 border-t">
-                <Btn variant="ghost" size="sm" onClick={()=>setModoManual(true)}>+ Cadastrar novo comprador</Btn>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="Nome *" value={clienteManualNome} onChange={e=>setClienteManualNome(e.target.value)}/>
-                <Input label="CPF/CNPJ *" mask="cpfCnpj" value={clienteManualCpf} onChange={e=>setClienteManualCpf(e.target.value)}/>
-              </div>
-              <div className="flex justify-between">
-                <Btn variant="ghost" size="sm" onClick={()=>setModoManual(false)}>Voltar para busca</Btn>
-                <Btn size="sm" loading={criarCliente.isPending} onClick={handleCriarClienteComprador}>Cadastrar e vincular</Btn>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
+      <ModalIncluirCliente
+        tipo="Comprador"
+        open={modalComprador}
+        onClose={()=>setModalComprador(false)}
+        busca={buscaCliente}
+        onChangeBusca={setBuscaCliente}
+        modoManual={modoManual}
+        onChangeModoManual={setModoManual}
+        clientesQuery={clientesCompradores}
+        idsJaVinculados={form.compradoresIds}
+        onSelecionarCliente={handleAddComprador}
+        clienteManualNome={clienteManualNome}
+        onChangeClienteManualNome={setClienteManualNome}
+        clienteManualCpf={clienteManualCpf}
+        onChangeClienteManualCpf={setClienteManualCpf}
+        loadingCriar={criarCliente.isPending}
+        onCriarCliente={handleCriarClienteComprador}
+      />
 
       {/* Modal Incluir Vendedor */}
-      <Modal title="Incluir Vendedor" open={modalVendedor} onClose={()=>setModalVendedor(false)} size="lg">
-        <div className="space-y-4">
-          {!modoManual ? (
-            <>
-              <div className="relative">
-                <Input label="Buscar por nome ou CPF" value={buscaCliente} onChange={e=>setBuscaCliente(e.target.value)} placeholder="Digite pelo menos 2 caracteres..."/>
-                <Search size={14} className="absolute right-3 top-9 text-gray-400"/>
-              </div>
-              {buscaCliente.length >= 2 && (
-                <div className="border rounded max-h-60 overflow-y-auto">
-                  {clientesVendedores.isLoading && <div className="p-3 text-center text-gray-400 text-sm">Buscando...</div>}
-                  {clientesVendedores.data?.lista?.length === 0 && <div className="p-3 text-center text-gray-400 text-sm">Nenhum vendedor encontrado.</div>}
-                  {(clientesVendedores.data?.lista||[]).map((c: any) => (
-                    <button key={c.id} onClick={()=>handleAddVendedor(c.id)}
-                      disabled={form.vendedoresIds.includes(c.id)}
-                      className={`w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-0 text-sm transition-colors ${form.vendedoresIds.includes(c.id)?'opacity-50 bg-gray-50':''}`}>
-                      <span className="font-medium">{c.nome}</span>
-                      <span className="text-gray-400 ml-2">{formatCpfCnpj(c.cpfCnpj)}</span>
-                      {c.email && <span className="text-gray-400 ml-2 text-xs">{c.email}</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="pt-2 border-t">
-                <Btn variant="ghost" size="sm" onClick={()=>setModoManual(true)}>+ Cadastrar novo vendedor</Btn>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="Nome *" value={clienteManualNome} onChange={e=>setClienteManualNome(e.target.value)}/>
-                <Input label="CPF/CNPJ *" mask="cpfCnpj" value={clienteManualCpf} onChange={e=>setClienteManualCpf(e.target.value)}/>
-              </div>
-              <div className="flex justify-between">
-                <Btn variant="ghost" size="sm" onClick={()=>setModoManual(false)}>Voltar para busca</Btn>
-                <Btn size="sm" loading={criarCliente.isPending} onClick={handleCriarClienteVendedor}>Cadastrar e vincular</Btn>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
+      <ModalIncluirCliente
+        tipo="Vendedor"
+        open={modalVendedor}
+        onClose={()=>setModalVendedor(false)}
+        busca={buscaCliente}
+        onChangeBusca={setBuscaCliente}
+        modoManual={modoManual}
+        onChangeModoManual={setModoManual}
+        clientesQuery={clientesVendedores}
+        idsJaVinculados={form.vendedoresIds}
+        onSelecionarCliente={handleAddVendedor}
+        clienteManualNome={clienteManualNome}
+        onChangeClienteManualNome={setClienteManualNome}
+        clienteManualCpf={clienteManualCpf}
+        onChangeClienteManualCpf={setClienteManualCpf}
+        loadingCriar={criarCliente.isPending}
+        onCriarCliente={handleCriarClienteVendedor}
+      />
 
       {/* Modal Incluir Imovel */}
-      <Modal title="Incluir Imóvel" open={modalImovel} onClose={()=>setModalImovel(false)} size="lg">
-        <div className="space-y-4">
-          {!modoManualImovel ? (
-            <>
-              <div className="relative">
-                <Input label="Buscar por matricula, endereco ou cidade" value={buscaImovel} onChange={e=>setBuscaImovel(e.target.value)} placeholder="Digite para filtrar..."/>
-                <Search size={14} className="absolute right-3 top-9 text-gray-400"/>
-              </div>
-              <div className="border rounded max-h-60 overflow-y-auto">
-                {filteredImoveis.length === 0 && <div className="p-3 text-center text-gray-400 text-sm">Nenhum imóvel encontrado.</div>}
-                {filteredImoveis.slice(0, 20).map((im: any) => (
-                  <button key={im.id} onClick={()=>handleAddImovel(im.id)}
-                    disabled={form.imoveisIds.includes(im.id)}
-                    className={`w-full text-left px-4 py-3 hover:bg-blue-50 border-b last:border-0 text-sm transition-colors ${form.imoveisIds.includes(im.id)?'opacity-50 bg-gray-50':''}`}>
-                    <span className="font-medium">{im.matricula ? `[${im.matricula}] ` : ''}{im.endereco}{im.numero ? `, ${im.numero}` : ''}</span>
-                    <span className="text-gray-400 ml-2">{im.cidade}/{im.uf}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="pt-2 border-t">
-                <Btn variant="ghost" size="sm" onClick={()=>setModoManualImovel(true)}>+ Cadastrar novo imovel</Btn>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="Matrícula" value={imovelForm.matricula} onChange={e=>setImovelForm(p=>({...p,matricula:e.target.value}))}/>
-                <Input label="Endereço *" value={imovelForm.endereco} onChange={e=>setImovelForm(p=>({...p,endereco:e.target.value}))}/>
-                <Input label="Numero" value={imovelForm.numero} onChange={e=>setImovelForm(p=>({...p,numero:e.target.value}))}/>
-                <Input label="Bairro" value={imovelForm.bairro} onChange={e=>setImovelForm(p=>({...p,bairro:e.target.value}))}/>
-                <Input label="Cidade *" value={imovelForm.cidade} onChange={e=>setImovelForm(p=>({...p,cidade:e.target.value}))}/>
-                <Input label="UF *" value={imovelForm.uf} onChange={e=>setImovelForm(p=>({...p,uf:e.target.value}))} maxLength={2}/>
-                <Input label="CEP" value={imovelForm.cep} onChange={e=>setImovelForm(p=>({...p,cep:e.target.value}))}/>
-              </div>
-              <div className="flex justify-between">
-                <Btn variant="ghost" size="sm" onClick={()=>setModoManualImovel(false)}>Voltar para busca</Btn>
-                <Btn size="sm" loading={criarImovel.isPending} onClick={handleCriarImovel}>Cadastrar e vincular</Btn>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
+      <ModalIncluirImovel
+        open={modalImovel}
+        onClose={()=>setModalImovel(false)}
+        busca={buscaImovel}
+        onChangeBusca={setBuscaImovel}
+        modoManual={modoManualImovel}
+        onChangeModoManual={setModoManualImovel}
+        imoveisFiltrados={filteredImoveis}
+        imoveisIdsVinculados={form.imoveisIds}
+        onSelecionarImovel={handleAddImovel}
+        imovelForm={imovelForm}
+        onChangeImovelForm={setImovelForm}
+        loadingCriar={criarImovel.isPending}
+        onCriarImovel={handleCriarImovel}
+      />
 
       {/* Modal Obs Etapa */}
-      <Modal title="Observação da Etapa" open={modalObsEtapa} onClose={()=>setModalObsEtapa(false)}>
-        <div className="space-y-4">
-          <Textarea label="Observação" value={etapaObsTexto} onChange={e=>setEtapaObsTexto(e.target.value)} rows={4} placeholder="Adicione uma observacao..."/>
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={()=>setModalObsEtapa(false)}>Cancelar</Btn>
-            {podeEditarDadosProcesso && (
-              <Btn loading={atualizarObsEtapa.isPending}
-                onClick={()=>{if(etapaObsTarget)atualizarObsEtapa.mutate({...etapaObsTarget,observacao:etapaObsTexto})}}>
-                Salvar
-              </Btn>
-            )}
-          </div>
-        </div>
-      </Modal>
+      <ModalObsEtapa
+        open={modalObsEtapa}
+        onClose={()=>setModalObsEtapa(false)}
+        observacao={etapaObsTexto}
+        onChangeObservacao={setEtapaObsTexto}
+        podeEditar={!!podeEditarDadosProcesso}
+        loading={atualizarObsEtapa.isPending}
+        onSalvar={()=>{if(etapaObsTarget)atualizarObsEtapa.mutate({...etapaObsTarget,observacao:etapaObsTexto})}}
+      />
 
       {/* Modal Nova Tarefa */}
       <ModalNovaTarefa
