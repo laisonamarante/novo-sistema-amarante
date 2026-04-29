@@ -101,7 +101,6 @@ export function QuickProcessSearch() {
   const vendedor = detalhe?.vendedores?.[0]?.cliente
   const imovel = detalhe?.imoveis?.[0]?.imovel
   const etapaAtual = detalhe?.etapas?.find((item: any) => !item.etapa?.concluido)
-  const usuariosInternos = (usuarios.data || []).filter((u: any) => ['Administrador', 'Gerente', 'Analista'].includes(u.perfil))
   const usuariosTarefa = getUsuariosTarefa(usuarios.data || [], resumo)
 
   useEffect(() => {

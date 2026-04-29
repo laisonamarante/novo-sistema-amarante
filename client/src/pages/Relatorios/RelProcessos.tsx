@@ -37,8 +37,6 @@ export function RelProcessos() {
 
   function setF(k:string,v:any) { setFiltros((f:any)=>({...f,[k]:v})) }
 
-  const total = data?.lista?.length || 0
-
   function handleExport() {
     if (!data?.lista?.length) return
     const headers = ['Codigo','N Proposta','Comprador','Banco','Agencia','Modalidade','Etapa Atual','Responsavel','Parceiro','Dias',...(exibirAtendimento ? ['Atendimento'] : [])]

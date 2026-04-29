@@ -1,11 +1,11 @@
 import { z } from 'zod'
-import { eq, like, and, or, desc, inArray, sql, isNull } from 'drizzle-orm'
+import { eq, and, or, desc, inArray, sql, isNull } from 'drizzle-orm'
 import { router, protectedProcedure, requirePerm } from '../trpc'
 import { TRPCError } from '@trpc/server'
 import {
   processos, processoCompradores, processoVendedores, processoImoveis,
   processoEtapas, processoHistorico, processoDocumentos, processoAtendimentos,
-  tarefas, usuarios, bancos, agencias, modalidades, fluxos, situacoes,
+  tarefas, usuarios, bancos, modalidades,
   corretores, parceiros, imobiliarias, construtoras, subestabelecidos, clientes, imoveis, etapas,
   documentosTipos, fluxoDocumentos, bancoModalidades, preAnalises
 , fluxoEtapas} from '../../drizzle/schema'

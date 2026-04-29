@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { trpc } from '../../lib/trpc'
 import { usePermissoes } from '../../lib/permissoes'
-import { PageHeader, Button, Input, Select, Card, Table, Loading, Modal, Textarea, Badge } from '../../components/ui'
-import { Plus, Bell } from 'lucide-react'
+import { PageHeader, Button, Input, Select, Card, Table, Loading, Modal, Textarea } from '../../components/ui'
 
 const PERFIS_AVISO = ['Todos','Administrador','Analista','Gerente','Corretor','Imobiliária','Parceiro','Construtora','Subestabelecido']
 
@@ -31,25 +30,6 @@ export function Avisos() {
     if (fim && hoje > fim) return false
     return true
   })
-
-  function formatPeriodo(a: any) {
-    const inicio = a.dataInicio || a.data_inicio
-    const fim = a.dataFim || a.data_fim
-    if (!inicio && !fim) return 'Sem período'
-    const fmtD = (d: string) => { try { const dt = new Date(d); return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('pt-BR') } catch { return d } }
-    if (inicio && fim) return `${fmtD(inicio)} a ${fmtD(fim)}`
-    if (inicio) return `A partir de ${fmtD(inicio)}`
-    return `Até ${fmtD(fim)}`
-  }
-
-  function isAtivo(a: any) {
-    const inicio = a.dataInicio || a.data_inicio
-    const fim = a.dataFim || a.data_fim
-    if (!inicio && !fim) return true
-    if (inicio && hoje < inicio) return false
-    if (fim && hoje > fim) return false
-    return true
-  }
 
   return (
     <div>

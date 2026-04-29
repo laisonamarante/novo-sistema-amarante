@@ -3,28 +3,6 @@ import { eq, and, desc, sql } from 'drizzle-orm'
 import { router, protectedProcedure } from '../trpc'
 import { advertencias, avisos, usuarios, permissoes } from '../../drizzle/schema'
 
-// Para listar a equipe interna em queries, usar:
-//   SELECT id, nome, login FROM usuarios WHERE perfil IN ('Administrador','Analista','Gerente') AND ativo = 1
-// (a antiga constante EQUIPE_INTERNA hardcoded foi removida em 2026-04-28 — era dead code)
-
-export const PERFIS_USUARIO = [
-  'Administrador', 'Analista', 'Gerente',
-  'Corretor', 'Imobiliária', 'Parceiro',
-  'Construtora',
-] as const
-
-// Módulos do sistema para controle de permissões
-export const MODULOS_PERMISSAO = [
-  'Cadastro de Cliente', 'Cadastro de Modalidade', 'Cadastro de Construtora',
-  'Cadastro de Empreendimento', 'Cadastro de Agência', 'Cadastro de Imobiliária',
-  'Cadastro de Corretor', 'Cadastro de Imóvel', 'Cadastro de Parceiro',
-  'Cadastro de Situação', 'Cadastro de Etapa', 'Cadastro de Fluxo',
-  'Cadastro de Processo', 'Cadastro de Banco', 'Tarefa', 'Relatórios',
-  'Advertência', 'Cadastro de Subestabelecido', 'Tipo de Despesa',
-  'Tipo de Receita', 'Devedor', 'Fornecedor', 'Natureza', 'Conta bancária',
-  'Contas a Pagar', 'Contas a Receber', 'Fluxo de Caixa',
-] as const
-
 export const advertenciasRouter = router({
   listar: protectedProcedure
     .input(z.object({

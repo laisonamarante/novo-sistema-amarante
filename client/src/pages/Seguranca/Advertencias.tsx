@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
 import { usePermissoes } from '../../lib/permissoes'
-import { PageHeader, Button, Input, Select, Card, Table, Loading, Modal, Textarea, Badge } from '../../components/ui'
+import { PageHeader, Button, Input, Select, Card, Table, Loading, Modal, Textarea } from '../../components/ui'
 import { Plus, Printer } from 'lucide-react'
 
 const STATUS_COLORS: Record<string,string> = {

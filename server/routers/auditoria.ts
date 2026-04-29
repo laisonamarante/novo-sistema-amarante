@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { and, desc, eq, gte, lte, like, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import { router, roleProcedure } from '../trpc'
 import { auditoria } from '../../drizzle/schema'
 

@@ -3,7 +3,7 @@ import { eq, and, desc, gte, lte, sql, or, inArray } from 'drizzle-orm'
 import { router, protectedProcedure, requirePerm } from '../trpc'
 import { TRPCError } from '@trpc/server'
 import {
-  tarefas, pontos, preAnalises, usuarios, avisos, advertencias,
+  tarefas, pontos, preAnalises, usuarios,
   bancos, agencias, modalidades, fluxos, situacoes, etapas,
   construtoras, imobiliarias, corretores, parceiros, subestabelecidos, subestabelecidoBancos, bancoModalidades, parceiroBancos, fluxoDocumentos, fluxoEtapas,
   imoveis, simuladores, finEmpresas, finContas, finFornecedores,

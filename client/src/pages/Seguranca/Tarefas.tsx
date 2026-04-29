@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trpc } from '../../lib/trpc'
 import { usePermissoes } from '../../lib/permissoes'
-import { PageHeader, Button, Select, Input, Card, Table, Loading, Modal, Textarea, Badge } from '../../components/ui'
+import { PageHeader, Button, Select, Input, Card, Table, Loading, Modal, Textarea } from '../../components/ui'
 import { Plus, CheckCircle, Pencil } from 'lucide-react'
 
 const STATUS_COLOR: Record<string,string> = {
