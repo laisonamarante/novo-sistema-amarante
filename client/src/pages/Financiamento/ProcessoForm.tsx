@@ -5,7 +5,7 @@ import { trpc } from '../../lib/trpc'
 import { getStoredAuthToken } from '../../lib/auth-storage'
 import { Input, Select, Textarea, Btn, Card, Spinner, Alert, Badge, Table } from '../../components/ui'
 import { formatCpfCnpj } from '../../lib/documento'
-import { ArrowLeft, Save, Printer, CheckCircle, Upload, Plus, MessageSquare, Trash2, FileText, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Save, Printer, CheckCircle, Upload, Plus, Trash2, FileText, AlertTriangle } from 'lucide-react'
 import {
   type Aba,
   EMPTY_HISTORICO_FORM,
@@ -21,13 +21,11 @@ import {
   PROCESSO_FORM_PRINT_STYLES,
   PROCESSO_FORM_REVISOR_PERFIS,
   PROCESSO_FORM_SECOES_DOC,
-  PROCESSO_FORM_TAREFA_STATUS,
 } from './processo-form/constants'
 import {
   buildDocumentoUrl,
   filtrarDocumentosPorSecao,
   formatCurrencyBr,
-  formatDateBr,
   formatDateTimeBr,
   formatDecimalBr,
   parseDecimalBr,
@@ -44,6 +42,11 @@ import { ModalHistorico } from './processo-form/ModalHistorico'
 import { ModalIncluirCliente } from './processo-form/ModalIncluirCliente'
 import { ModalIncluirImovel } from './processo-form/ModalIncluirImovel'
 import { ModalObsEtapa } from './processo-form/ModalObsEtapa'
+import { ProcessoFormProvider, type ProcessoFormContextValue } from './processo-form/ProcessoFormContext'
+import { AbaVinculo } from './processo-form/abas/AbaVinculo'
+import { AbaTarefas } from './processo-form/abas/AbaTarefas'
+import { AbaHistorico } from './processo-form/abas/AbaHistorico'
+import { AbaAtendimento } from './processo-form/abas/AbaAtendimento'
 
 const PROCESSO_FORM_ABAS_CADASTRO_INICIAL = new Set<Aba>(['dadosGerais', 'valores', 'comprador', 'vendedor', 'imovel'])
 
@@ -652,7 +655,59 @@ export function ProcessoForm() {
 
   if (isEdicao && processo.isLoading) return <div className="flex justify-center py-12"><Spinner/></div>
 
+  // Helper de campo genérico para o context (espelha o setForm direto por chave)
+  const setF = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }))
+
+  // Permissões consolidadas — espelham as flags já calculadas acima
+  const permissoes = {
+    isExterno,
+    isAdmin: perfil === 'Administrador',
+    isRevisor,
+    podeSalvarProcesso,
+    podeGerenciarProcesso,
+    podeEditarDadosProcesso,
+    processoTravadoParaExterno,
+    podeIncluirVendedor,
+    podeIncluirImovel,
+    podeAlterarVendedor,
+    podeAlterarImovel,
+    podeGerenciarDocumentos,
+    modoSomenteLeitura,
+    podeCriarTarefa,
+    existeTarefaPendente,
+  }
+
+  const contextValue: ProcessoFormContextValue = {
+    id,
+    isEdicao,
+    processo,
+    form,
+    setForm,
+    setF,
+    getUserName,
+    bancos: bancos.data || [],
+    agencias: agencias.data || [],
+    modalidades: modalidades.data || [],
+    modalidadesFiltradas,
+    fluxos: fluxos.data || [],
+    fluxosFiltrados,
+    situacoes: situacoes.data || [],
+    usuarios: usuarios.data || [],
+    usuariosInternos,
+    usuariosExecutantesTarefa,
+    parceiros: parceiros.data || [],
+    corretores: corretores.data || [],
+    imobiliarias: imobiliarias.data || [],
+    construtoras: construtoras.data || [],
+    historicoData: historicoData.data || [],
+    pendencias,
+    tarefasAbertas,
+    permissoes,
+    marcarAlteracaoAtendimento,
+  }
+
   return (
+    <ProcessoFormProvider value={contextValue}>
     <div>
       {/* Print styles */}
       <style>{PROCESSO_FORM_PRINT_STYLES}</style>
@@ -1322,114 +1377,30 @@ export function ProcessoForm() {
             </div>
           )}
 
-                    {/* TAREFAS */}
+          {/* TAREFAS */}
           {aba==='tarefas' && (
-            <div>
-              <div className="mb-4 flex justify-between items-center">
-                <div className="flex gap-3 text-xs">
-                  {PROCESSO_FORM_TAREFA_STATUS.map(s=>(
-                    <button key={s||'todas'} onClick={()=>setFiltroStatusTarefa(s)}
-                      className={`px-3 py-1 rounded-full border transition-colors ${filtroStatusTarefa===s?'bg-blue-600 text-white border-blue-600':'text-gray-500 hover:bg-gray-100'}`}>
-                      {s||'Todas'}
-                    </button>
-                  ))}
-                </div>
-                {podeCriarTarefa && <Btn size="sm" icon={<Plus size={13}/>} onClick={()=>setModalTarefa(true)}>Nova Tarefa</Btn>}
-              </div>
-              {isExterno && existeTarefaPendente && (
-                <p className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                  Já existe uma tarefa pendente para este processo. O usuário externo só pode abrir uma nova tarefa quando não houver pendência aberta.
-                </p>
-              )}
-              <Table headers={['N','Solicitante','Tarefa','Data','Data Limite','Executante','Status']}>
-                {(processo.data?.tarefas||[])
-                  .filter((t: any) => !filtroStatusTarefa || t.status === filtroStatusTarefa)
-                  .map((t: any) => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <Badge label={String(t.id)} color={t.status==='Pendente'?'bg-yellow-100 text-yellow-700':t.status==='Resolvida'?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}/>
-                    </td>
-                    <td className="px-4 py-3 text-xs">{getUserName(t.solicitanteId)}</td>
-                    <td className="px-4 py-3 text-sm max-w-xs">{t.solicitacao}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{formatDateBr(t.criadoEm)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{t.dataLimite ? formatDateBr(t.dataLimite) : '—'}</td>
-                    <td className="px-4 py-3 text-xs">{getUserName(t.executanteId)}</td>
-                    <td className="px-4 py-3"><Badge label={t.status}/></td>
-                  </tr>
-                ))}
-              </Table>
-            </div>
+            <AbaTarefas
+              filtroStatusTarefa={filtroStatusTarefa}
+              setFiltroStatusTarefa={setFiltroStatusTarefa}
+              onAbrirNovaTarefa={()=>setModalTarefa(true)}
+            />
           )}
 
           {/* ATENDIMENTO */}
           {!isExterno && aba==='atendimento' && (
-            <div>
-              {atendimentoAlteracaoPendente && (
-                <Alert
-                  type="warning"
-                  message="Existe uma alteração neste processo aguardando o registro obrigatório do que foi feito."
-                />
-              )}
-              <div className="mb-4 flex justify-end">
-                {podeEditarDadosProcesso && <Btn size="sm" icon={<MessageSquare size={13}/>} onClick={()=>setModalNovaObs(true)}>Novo Atendimento</Btn>}
-              </div>
-              <div className="space-y-3">
-                {(processo.data?.atendimentos||[]).map((a: any,i: number) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-gray-500">{formatDateTimeBr(a.criadoEm)}</span>
-                      <span className="text-xs text-gray-400">Usuário: {getUserName(a.usuarioId)}</span>
-                    </div>
-                    <p className="text-sm text-gray-700">{a.descricao}</p>
-                  </div>
-                ))}
-                {!processo.data?.atendimentos?.length && <p className="text-gray-400 text-sm text-center py-8">Nenhum atendimento registrado.</p>}
-              </div>
-            </div>
+            <AbaAtendimento
+              atendimentoAlteracaoPendente={atendimentoAlteracaoPendente}
+              onAbrirNovoAtendimento={()=>setModalNovaObs(true)}
+            />
           )}
 
           {/* HISTORICO */}
           {aba==='historico' && (
-            <div>
-              <div className="mb-4 flex justify-end no-print">
-                {podeEditarDadosProcesso && <Btn size="sm" icon={<Plus size={13}/>} onClick={()=>setModalHistorico(true)}>Incluir Histórico</Btn>}
-              </div>
-              <Table headers={['Data','Título / Descrição','Etapa','Tipo','Usuário']}>
-                {(historicoData.data||[]).map((h: any, i: number) => (
-                  <tr key={h.id || i} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDateTimeBr(h.criadoEm)}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {h.titulo && <div className="font-medium text-gray-800">{h.titulo}</div>}
-                      <div className="text-gray-600 whitespace-pre-line">{h.descricao}</div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{h.etapa || '—'}</td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        label={h.tipo === 'pendencia' ? 'Pendência' : h.tipo === 'pre_analise' ? 'Pré-análise' : 'Histórico'}
-                        color={h.tipo === 'pendencia' ? 'bg-yellow-100 text-yellow-700' : h.tipo === 'pre_analise' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{h.usuarioNome || '—'}</td>
-                  </tr>
-                ))}
-              </Table>
-              {!historicoData.data?.length && <p className="text-gray-400 text-sm text-center py-8">Nenhum registro no historico.</p>}
-            </div>
+            <AbaHistorico onAbrirIncluirHistorico={()=>setModalHistorico(true)} />
           )}
 
           {/* VINCULO */}
-          {aba==='vinculo' && (
-            <fieldset disabled={processoTravadoParaExterno} className="grid grid-cols-2 gap-4 disabled:opacity-80">
-              <Select label="Parceiro" value={form.parceiroId} onChange={fn('parceiroId')}
-                options={(parceiros.data||[]).map(p=>({value:p.id,label:p.nome}))} placeholder="Selecione..."/>
-              <Select label="Corretor" value={form.corretorId} onChange={fn('corretorId')}
-                options={(corretores.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
-              <Select label="Imobiliária" value={form.imobiliariaId} onChange={fn('imobiliariaId')}
-                options={(imobiliarias.data||[]).map(i=>({value:i.id,label:i.nome}))} placeholder="Selecione..."/>
-              <Select label="Construtora" value={form.construtoraId} onChange={fn('construtoraId')}
-                options={(construtoras.data||[]).map(c=>({value:c.id,label:c.nome}))} placeholder="Selecione..."/>
-            </fieldset>
-          )}
+          {aba==='vinculo' && <AbaVinculo />}
         </div>
       </Card>
 
@@ -1597,5 +1568,6 @@ export function ProcessoForm() {
 
       <DocumentoPreview documento={documentoPreview} onClose={()=>setDocumentoPreview(null)} />
     </div>
+    </ProcessoFormProvider>
   )
 }
