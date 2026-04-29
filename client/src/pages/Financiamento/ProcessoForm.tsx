@@ -33,6 +33,12 @@ import {
   parseDecimalBr,
 } from './processo-form/utils'
 import { RelatorioImpressao } from './processo-form/RelatorioImpressao'
+import { DocumentoPreview } from './processo-form/DocumentoPreview'
+import { ModalNovoAtendimento } from './processo-form/ModalNovoAtendimento'
+import { ModalConcluirEtapa } from './processo-form/ModalConcluirEtapa'
+import { ModalPendenteEtapa } from './processo-form/ModalPendenteEtapa'
+import { ModalNovaTarefa } from './processo-form/ModalNovaTarefa'
+import { ModalReprovarDocumento } from './processo-form/ModalReprovarDocumento'
 
 const PROCESSO_FORM_ABAS_CADASTRO_INICIAL = new Set<Aba>(['dadosGerais', 'valores', 'comprador', 'vendedor', 'imovel'])
 
@@ -98,9 +104,6 @@ export function ProcessoForm() {
   const [reprovarModal, setReprovarModal] = useState<{id:number,nome:string}|null>(null)
   const [reprovarMotivo, setReprovarMotivo] = useState('')
   const [documentoPreview, setDocumentoPreview] = useState<{nome:string; url:string}|null>(null)
-  const [documentoPreviewOffset, setDocumentoPreviewOffset] = useState({ x: 0, y: 0 })
-  const documentoPreviewRef = useRef<HTMLIFrameElement>(null)
-  const documentoPreviewDragRef = useRef<{startX:number;startY:number;originX:number;originY:number}|null>(null)
   const marcarAlteracaoAtendimento = (opcoes?: { exigirAgora?: boolean; irParaAtendimento?: boolean }) => {
     if (!isEdicao || isExterno) return
     setAtendimentoAlteracaoPendente(true)
@@ -636,46 +639,10 @@ export function ProcessoForm() {
 
   const docsPorSecao = (secao: string) => filtrarDocumentosPorSecao(processo.data?.documentos || [], secao)
   const abrirDocumento = (documento: any, nomeAlternativo?: string) => {
-    setDocumentoPreviewOffset({ x: 0, y: 0 })
     setDocumentoPreview({
       nome: nomeAlternativo || documento.nomeArquivo || 'Documento',
       url: buildDocumentoUrl(documento.caminhoArquivo),
     })
-  }
-  const moverDocumentoPreview = (event: PointerEvent) => {
-    const drag = documentoPreviewDragRef.current
-    if (!drag) return
-    setDocumentoPreviewOffset({
-      x: drag.originX + event.clientX - drag.startX,
-      y: drag.originY + event.clientY - drag.startY,
-    })
-  }
-  const pararArrasteDocumentoPreview = () => {
-    documentoPreviewDragRef.current = null
-    window.removeEventListener('pointermove', moverDocumentoPreview)
-  }
-  const iniciarArrasteDocumentoPreview = (event: any) => {
-    if (event.button !== 0) return
-    const target = event.target as HTMLElement
-    if (target.closest('button,a')) return
-    documentoPreviewDragRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: documentoPreviewOffset.x,
-      originY: documentoPreviewOffset.y,
-    }
-    window.addEventListener('pointermove', moverDocumentoPreview)
-    window.addEventListener('pointerup', pararArrasteDocumentoPreview, { once: true })
-  }
-  const imprimirDocumento = () => {
-    const frame = documentoPreviewRef.current
-    if (!frame?.contentWindow) return
-    frame.contentWindow.focus()
-    frame.contentWindow.print()
-  }
-  const abrirDocumentoEmJanela = () => {
-    if (!documentoPreview) return
-    window.open(documentoPreview.url, '_blank', 'popup=yes,width=1200,height=900,noopener,noreferrer')
   }
 
   if (isEdicao && processo.isLoading) return <div className="flex justify-center py-12"><Spinner/></div>
@@ -1338,31 +1305,15 @@ export function ProcessoForm() {
               )}
 
               {/* Modal Reprovar */}
-              {reprovarModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5">
-                    <h3 className="font-semibold text-red-700 flex items-center gap-2 mb-3">
-                      <span>❌</span> Reprovar Documento
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3">Documento: <strong>{reprovarModal.nome}</strong></p>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo da recusa *</label>
-                    <textarea
-                      value={reprovarMotivo}
-                      onChange={e=>setReprovarMotivo(e.target.value)}
-                      placeholder="Descreva o motivo da recusa..."
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm h-24 resize-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    />
-                    <div className="flex gap-3 mt-4">
-                      <button onClick={()=>setReprovarModal(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded text-sm">Cancelar</button>
-                      <button
-                        onClick={()=>reprovarMotivo.trim() && reprovarDoc.mutate({id:reprovarModal.id, motivo:reprovarMotivo.trim()})}
-                        disabled={!podeGerenciarProcesso || !reprovarMotivo.trim() || reprovarDoc.isPending}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded text-sm disabled:opacity-50"
-                      >Reprovar</button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <ModalReprovarDocumento
+                target={reprovarModal}
+                motivo={reprovarMotivo}
+                onChangeMotivo={setReprovarMotivo}
+                onClose={()=>setReprovarModal(null)}
+                onReprovar={()=>reprovarMotivo.trim() && reprovarModal && reprovarDoc.mutate({id:reprovarModal.id, motivo:reprovarMotivo.trim()})}
+                podeReprovar={!!podeGerenciarProcesso}
+                loading={reprovarDoc.isPending}
+              />
             </div>
           )}
 
@@ -1499,18 +1450,15 @@ export function ProcessoForm() {
       {/* ======= MODALS ======= */}
 
       {/* Modal Novo Atendimento */}
-      <Modal title="Novo Atendimento" open={modalNovaObs} onClose={()=>setModalNovaObs(false)}>
-        <div className="space-y-4">
-          <Textarea label="Descrição" value={novaObs} onChange={e=>setNovaObs(e.target.value)} rows={4} placeholder="Registre o atendimento..."/>
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={()=>setModalNovaObs(false)}>Cancelar</Btn>
-            {podeEditarDadosProcesso && (
-              <Btn loading={addAtendimento.isPending}
-                onClick={()=>addAtendimento.mutate({processoId:Number(id),descricao:novaObs})}>Salvar</Btn>
-            )}
-          </div>
-        </div>
-      </Modal>
+      <ModalNovoAtendimento
+        open={modalNovaObs}
+        onClose={()=>setModalNovaObs(false)}
+        valor={novaObs}
+        onChange={setNovaObs}
+        onSalvar={()=>addAtendimento.mutate({processoId:Number(id),descricao:novaObs})}
+        loading={addAtendimento.isPending}
+        podeSalvar={!!podeEditarDadosProcesso}
+      />
 
       <Modal title="Registrar atendimento obrigatório" open={modalAtendimentoObrigatorio} onClose={()=>setModalAtendimentoObrigatorio(false)}>
         <div className="space-y-4">
@@ -1536,51 +1484,34 @@ export function ProcessoForm() {
       </Modal>
 
       {/* Modal Concluir Etapa */}
-      <Modal title="Concluir Etapa" open={modalConcluirEtapa} onClose={()=>setModalConcluirEtapa(false)}>
-        <div className="space-y-4">
-          <Textarea label="Observação" value={concluirEtapaObs} onChange={e=>setConcluirEtapaObs(e.target.value)} rows={3} placeholder="Observação sobre a conclusao..."/>
-          {!isExterno && (
-            <Select
-              label="Próximo responsável interno *"
-              value={proximoResponsavelEtapaId}
-              onChange={e=>setProximoResponsavelEtapaId(Number(e.target.value))}
-              options={usuariosInternos.map((u: any)=>({value:u.id,label:u.nome}))}
-              placeholder="Selecione quem receberá a tarefa..."
-            />
-          )}
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={()=>setModalConcluirEtapa(false)}>Cancelar</Btn>
-            {(podeGerenciarProcesso || isExterno) && (
-              <Btn variant="success" loading={avancarEtapa.isPending}
-                disabled={!isExterno && !proximoResponsavelEtapaId}
-                onClick={()=>{if(concluirEtapaTarget) avancarEtapa.mutate({
-                  ...concluirEtapaTarget,
-                  observacao:concluirEtapaObs||undefined,
-                  proximoResponsavelId: isExterno ? undefined : proximoResponsavelEtapaId,
-                })}}>
-                Concluir Etapa
-              </Btn>
-            )}
-          </div>
-        </div>
-      </Modal>
+      <ModalConcluirEtapa
+        open={modalConcluirEtapa}
+        onClose={()=>setModalConcluirEtapa(false)}
+        observacao={concluirEtapaObs}
+        onChangeObservacao={setConcluirEtapaObs}
+        proximoResponsavelId={proximoResponsavelEtapaId}
+        onChangeProximoResponsavelId={setProximoResponsavelEtapaId}
+        usuariosInternos={usuariosInternos}
+        isExterno={isExterno}
+        podeConcluir={!!(podeGerenciarProcesso || isExterno)}
+        loading={avancarEtapa.isPending}
+        onConcluir={()=>{if(concluirEtapaTarget) avancarEtapa.mutate({
+          ...concluirEtapaTarget,
+          observacao:concluirEtapaObs||undefined,
+          proximoResponsavelId: isExterno ? undefined : proximoResponsavelEtapaId,
+        })}}
+      />
 
       {/* Modal Etapa Pendente */}
-      <Modal title="Deixar Etapa Pendente" open={modalPendenteEtapa} onClose={()=>setModalPendenteEtapa(false)}>
-        <div className="space-y-4">
-          <Textarea label="Motivo / Observação *" value={pendenteEtapaObs} onChange={e=>setPendenteEtapaObs(e.target.value)} rows={4} placeholder="Descreva o motivo da pendência..."/>
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={()=>setModalPendenteEtapa(false)}>Cancelar</Btn>
-            {podeEditarDadosProcesso && (
-              <Btn variant="secondary" loading={marcarEtapaPendente.isPending}
-                onClick={()=>{if(pendenteEtapaTarget && pendenteEtapaObs.trim()) marcarEtapaPendente.mutate({...pendenteEtapaTarget, observacao: pendenteEtapaObs.trim()})}}
-                disabled={!pendenteEtapaObs.trim()}>
-                Salvar Pendência
-              </Btn>
-            )}
-          </div>
-        </div>
-      </Modal>
+      <ModalPendenteEtapa
+        open={modalPendenteEtapa}
+        onClose={()=>setModalPendenteEtapa(false)}
+        observacao={pendenteEtapaObs}
+        onChangeObservacao={setPendenteEtapaObs}
+        podeSalvar={!!podeEditarDadosProcesso}
+        loading={marcarEtapaPendente.isPending}
+        onSalvar={()=>{if(pendenteEtapaTarget && pendenteEtapaObs.trim()) marcarEtapaPendente.mutate({...pendenteEtapaTarget, observacao: pendenteEtapaObs.trim()})}}
+      />
 
       {/* Modal Incluir Histórico */}
       <Modal title="Incluir Histórico" open={modalHistorico} onClose={()=>setModalHistorico(false)}>
@@ -1746,72 +1677,18 @@ export function ProcessoForm() {
       </Modal>
 
       {/* Modal Nova Tarefa */}
-      <Modal title="Nova Tarefa" open={modalTarefa} onClose={()=>setModalTarefa(false)}>
-        <div className="space-y-4">
-          <Select label="Executante *" value={tarefaForm.executanteId} onChange={e=>setTarefaForm(p=>({...p,executanteId:Number(e.target.value)}))}
-            options={usuariosExecutantesTarefa.map((u: any)=>({value:u.id,label:u.nome}))} placeholder="Selecione..."/>
-          <Textarea label="Solicitacao *" value={tarefaForm.solicitacao} onChange={e=>setTarefaForm(p=>({...p,solicitacao:e.target.value}))} rows={4} placeholder="Descreva a tarefa..."/>
-          <Input label="Data Limite" type="date" value={tarefaForm.dataLimite} onChange={e=>setTarefaForm(p=>({...p,dataLimite:e.target.value}))}/>
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={()=>setModalTarefa(false)}>Cancelar</Btn>
-            {podeCriarTarefa && <Btn loading={criarTarefa.isPending} onClick={handleCriarTarefa}>Criar Tarefa</Btn>}
-          </div>
-        </div>
-      </Modal>
+      <ModalNovaTarefa
+        open={modalTarefa}
+        onClose={()=>setModalTarefa(false)}
+        form={tarefaForm}
+        onChangeForm={setTarefaForm}
+        usuariosExecutantes={usuariosExecutantesTarefa}
+        podeCriar={!!podeCriarTarefa}
+        loading={criarTarefa.isPending}
+        onCriar={handleCriarTarefa}
+      />
 
-      {documentoPreview && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50" onClick={()=>setDocumentoPreview(null)}/>
-          <div
-            className="fixed left-1/2 top-1/2 z-10 flex h-[92vh] w-[94vw] max-w-[1400px] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl bg-white shadow-2xl"
-            style={{ transform: `translate(calc(-50% + ${documentoPreviewOffset.x}px), calc(-50% + ${documentoPreviewOffset.y}px))` }}
-          >
-            <div
-              className="flex cursor-move items-center justify-between gap-3 border-b px-5 py-3"
-              onPointerDown={iniciarArrasteDocumentoPreview}
-            >
-              <div className="min-w-0">
-                <h2 className="truncate text-base font-semibold text-gray-800">{documentoPreview.nome}</h2>
-                <p className="text-xs text-gray-500">Arraste esta barra para mover a visualização.</p>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={abrirDocumentoEmJanela}
-                className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Abrir em nova janela
-              </button>
-              <a
-                href={documentoPreview.url}
-                download={documentoPreview.nome}
-                className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                Baixar
-              </a>
-              <button
-                type="button"
-                onClick={imprimirDocumento}
-                className="inline-flex items-center gap-2 rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Imprimir
-              </button>
-              <button
-                type="button"
-                onClick={()=>setDocumentoPreview(null)}
-                className="flex h-9 w-9 items-center justify-center rounded border border-gray-300 text-xl leading-none text-gray-500 hover:bg-gray-50 hover:text-gray-800">
-                ×
-              </button>
-            </div>
-            </div>
-            <div className="flex-1 bg-gray-100 p-3">
-            <iframe
-              ref={documentoPreviewRef}
-              title={documentoPreview.nome}
-              src={documentoPreview.url}
-              className="h-full w-full rounded border border-gray-200 bg-white"
-            />
-          </div>
-          </div>
-        </div>
-      )}
+      <DocumentoPreview documento={documentoPreview} onClose={()=>setDocumentoPreview(null)} />
     </div>
   )
 }
