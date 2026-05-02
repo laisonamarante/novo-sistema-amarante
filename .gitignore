@@ -7,3 +7,6 @@ dist/
 backups/
 __tmp_upload__/
 uploads/
+
+# Migracao Easy (dados sensiveis + .bak gigante)
+.easy-backup/
